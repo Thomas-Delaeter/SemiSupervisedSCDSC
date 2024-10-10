@@ -28,15 +28,13 @@ def get_data_patch(data, patch_size):
     patch_w = patch_size[0]
     patch_h = patch_size[1]
 
-    # 获取pad的尺寸
+    # Get the size of the padding
     pad_h = int((patch_h - 1) / 2)
     pad_w = int((patch_w - 1) / 2)
-    # pad_h = pad_h.astype(np.int16)
-    # pad_w = pad_w.astype(np.int16)
 
     res = np.zeros((data.shape[0], data.shape[1], patch_w, patch_h, data.shape[2]))
 
-    # 获取pad后的图像
+    # Get the padded image
     data_ = np.pad(data, ((pad_h, pad_h), (pad_w, pad_w), (0, 0)), 'edge')
 
     for i in range(pad_h, data.shape[0] - pad_h):
@@ -48,21 +46,21 @@ def get_data_patch(data, patch_size):
 
 def get_patch(array, window=(0,), asteps=None, wsteps=None, axes=None, toend=True):
     """
-    :param array: 需要处理的数据
-    :param window: 窗口的大小，如果是一个数，那么窗口对应的是最后一个维度的长度，如果是一个tuple,那么对应的是block的维度及大小
+    :param array: Data to be processed
+    :param window: Size of the window. If it is a single value, it corresponds to the length of the last dimension. If it is a tuple, it corresponds to the dimensions and size of the block
     :param asteps:
     :param wsteps:
-    :param axes: 对应window对应的每一个维度
+    :param axes: Corresponds to each dimension of the window
     :param toend:
     :return:
     """
-    array = np.asarray(array)  # 多余？
+    array = np.asarray(array)  # Redundant?
     orig_shape = np.asarray(array.shape)
 
-    # 将标量转换为数组，而数组泽保持不变
+    # Convert scalar to array, while array remains unchanged
     window = np.atleast_1d(window).astype(int)
 
-    # 确定block的维度及每个维度的大小
+    # Determine the dimensions and size of each dimension of the block
     if axes is not None:
         axes = np.atleast_1d(axes)
         w = np.zeros(array.ndim, dtype=int)
@@ -70,45 +68,45 @@ def get_patch(array, window=(0,), asteps=None, wsteps=None, axes=None, toend=Tru
             w[axes] = size
         window = w
 
-    # 显然window是个一维的标量
+    # Clearly, window is a one-dimensional scalar
     if window.ndim > 1:
-        raise ValueError("window must be one-dimenional.")
+        raise ValueError("window must be one-dimensional.")
     if np.any(window < 0):
-        raise ValueError("每个维度的长度必须大于一.")
-    # 此函数的作用是从原始大矩阵中分割出一个个小块，所以割出的小块的大小肯定比原始的矩阵小
+        raise ValueError("The length of each dimension must be greater than one.")
+    # The purpose of this function is to divide the original large matrix into smaller blocks, so the size of each block must be smaller than the original matrix
     if len(array.shape) < len(window):
-        raise ValueError("window的维度大小必须比原来的小或者相同")
+        raise ValueError("The dimensions of window must be smaller or equal to the original")
 
     _asteps = np.ones_like(orig_shape)
-    # asteps 为窗口外的步长应该
+    # asteps is probably the step size outside the window
     if asteps is not None:
         asteps = np.atleast_1d(asteps)
         if asteps.ndim != 1:
-            raise ValueError('asteps 为window的每个维度的步长组成的list只有一维')
+            raise ValueError('asteps must be a 1D list of step sizes for each dimension of the window')
         if len(asteps) > array.ndim:
             raise ValueError('block dims bigger than array dims')
-        # 什么意思？调试
+        # What does this mean? Debugging
         _asteps[-len(asteps):] = asteps
         if np.any(asteps < 1):
-            raise ValueError("步长必须大于等于1")
+            raise ValueError("Step sizes must be greater than or equal to 1")
     asteps = _asteps
 
     _wsteps = np.ones_like(window)
     if wsteps is not None:
         wsteps = np.atleast_1d(wsteps)
-        # 这是窗内的步长，每一个维度的抽样步长
+        # This is the step size within the window, i.e., the sampling step size for each dimension
         if wsteps.shape != window.shape:
-            raise ValueError("维度错误")
+            raise ValueError("Dimension error")
         if np.any(wsteps <= 0):
-            raise ValueError("所有的步长都必须大于0")
+            raise ValueError("All step sizes must be greater than 0")
         _wsteps[:] = wsteps
-        # steps至少也得是1吧
+        # Steps must be at least 1
         _wsteps[window == 0] = 1
     wsteps = _wsteps
 
-    # window的大小必须在对应的每一个维度上都要小于或者等于原始矩阵
+    # The size of the window must be less than or equal to the corresponding dimension of the original matrix
     if np.any(orig_shape[-len(window):] < window * wsteps):
-        raise ValueError('window*wsteps larger than array in at least one demension')
+        raise ValueError('window*wsteps larger than array in at least one dimension')
 
     new_shape = orig_shape
     _window = window.copy()
@@ -148,16 +146,16 @@ def get_patch(array, window=(0,), asteps=None, wsteps=None, axes=None, toend=Tru
 
 def get_HSI_patches(x, gt, ksize, stride=(1, 1), padding='reflect', is_index=False, is_labeled=True):
     """
-    :param x: inputs data
+    :param x: input data
     :param gt: label data
-    :param ksize: kernal_size
+    :param ksize: kernel size
     :param stride: stride value
-    :param padding: the mode of padding
+    :param padding: padding mode
     :param is_index:
     :param is_labeled:
     :return:
     """
-    # np.ceil向上取整，
+    # np.ceil rounds up
     new_height = np.ceil(x.shape[0] / stride[0])
     new_width = np.ceil(x.shape[1] / stride[1])
     band = x.shape[2]
@@ -170,9 +168,9 @@ def get_HSI_patches(x, gt, ksize, stride=(1, 1), padding='reflect', is_index=Fal
     pad_left = int(pad_needed_width / 2)
     pad_right = int(pad_needed_width - pad_left)
 
-    # 三维的图像，每个dim都要进行pad
+    # 3D images need to be padded in each dimension
     x = np.pad(x, ((pad_top, pad_down), (pad_left, pad_right), (0, 0)), padding)
-    # 标签也需要padding？
+    # Does the label also need padding?
     gt = np.pad(gt, ((pad_top, pad_down), (pad_left, pad_right)), padding)
 
     n_row, n_clm, n_band = x.shape
@@ -204,14 +202,13 @@ def get_HSI_patches(x, gt, ksize, stride=(1, 1), padding='reflect', is_index=Fal
 
     print('x_patches shape: %s, labels: %s' % (x_patches.shape, np.unique(y)))
 
-    # x_patches_nonzero = np.transpose(x_patches_nonzero, [0, 3, 1, 2])
     y_patches_nonzero = y_patches_nonzero.flatten()
     return x_patches_nonzero, y_patches_nonzero, nonzero_index
 
 
 def standardize_label(y):
     """
-    standardize the classes label into 0-k
+    Standardize class labels into 0-k
     :param y:
     :return:
     """
@@ -224,11 +221,9 @@ def standardize_label(y):
 
 
 class Load_my_Dataset():
-
     def __init__(self, image_path, label_path):
         X, Y = get_data(image_path, label_path)
         n_row, n_column, n_band = X.shape
-
 
         # perform PCA
         from sklearn.decomposition import PCA
@@ -238,7 +233,7 @@ class Load_my_Dataset():
         X = pca.fit_transform(X.reshape(n_row * n_column, n_band)).reshape((n_row, n_column, n_components))
 
         x_patches, y_patches, index = get_HSI_patches(x=X, gt=Y, ksize=(17, 17), is_labeled=True)
-        x_patches = scale(x_patches.reshape(x_patches.shape[0],-1))
+        x_patches = scale(x_patches.reshape(x_patches.shape[0], -1))
 
         n_components = 300
         pca = PCA(n_components)
@@ -250,7 +245,6 @@ class Load_my_Dataset():
         n_samples, n_row, n_col, n_channel = x_train.shape
         x_train = scale(x_train.reshape((n_samples, -1))).reshape((n_samples, n_row, n_col, -1))
 
-
         x_patches_pre, y_patches_pre, _ = get_HSI_patches(x=X, gt=Y, ksize=(7, 7), is_labeled=False)
         x_patches_pre = np.transpose(x_patches_pre, [0, 2, 3, 1])
         n_samples, n_row, n_col, n_channel = x_patches_pre.shape
@@ -258,7 +252,7 @@ class Load_my_Dataset():
         x_patches_pre = np.transpose(x_patches_pre, axes=(0, 3, 1, 2))
 
         y_patches = y_patches.reshape(-1)
-        self.x, self.y, self.index, self.train, self.train_pre,self.y_patches_pre = x_patches, y_patches, index, x_train, x_patches_pre,y_patches_pre.reshape(-1)
+        self.x, self.y, self.index, self.train, self.train_pre, self.y_patches_pre = x_patches, y_patches, index, x_train, x_patches_pre, y_patches_pre.reshape(-1)
 
     def __len__(self):
         return self.x.shape[0]
