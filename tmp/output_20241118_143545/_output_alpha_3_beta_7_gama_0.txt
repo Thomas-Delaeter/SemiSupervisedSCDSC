@@ -1,0 +1,10 @@
+hello world2024-11-18 14:35:52.091747
+use cuda: False
+current alpha:  3.0 current beta:  7.0 current gama:  0.0
+x_patches shape: (610, 340, 8, 17, 17), labels: [0 1 2 3 4 5 6 7 8 9]
+step1ok
+x_patches shape: (610, 340, 8, 7, 7), labels: [0 1 2 3 4 5 6 7 8 9]
+Namespace(lr=0.005, lnp=20, outp=500, smooth_window_size=7, pre_train_iters=10, n_clusters=9, d=5, hierarchy=1, n_z=32, eta=5, dataset='pavia', device_index=1, pretrain_path='weight/pavia.pkl', alpha=3.0, beta=7.0, gama=0.0, cuda=False, n_input=8, image_size=[610, 340], num_sample=42776)
+this is 0round
+torch.Size([1568, 9])
+Partition 0: 11383 clusters

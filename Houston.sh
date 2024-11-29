@@ -4,7 +4,8 @@
 # and save the outputs to individual files.
 
 # Path to save the output files
-OUTPUT_DIR="/home/xianlli/code/Signal_processing/result/ours/Houston/beta-gama"
+#OUTPUT_DIR="/home/xianlli/code/Signal_processing/result/ours/Houston/beta-gama"
+OUTPUT_DIR="./tmp"
 timestamp=$(date +"%Y%m%d_%H%M%S")
 OUTPUT_SUBDIR="${OUTPUT_DIR}/output_${timestamp}"
 mkdir -p "${OUTPUT_SUBDIR}"
@@ -12,9 +13,9 @@ mkdir -p "${OUTPUT_SUBDIR}"
 # fixed parameter
 lr=0.0001
 smooth_window_size=3
-pre_train_iters=70
+pre_train_iters=10
 dataset='Houston'
-device_index=1
+device_index=0
 lnp=20
 outp=100
 
@@ -26,11 +27,13 @@ beta=8
 # Define the output file with dynamic naming based on parameters
 OUTPUT_FILE="${OUTPUT_SUBDIR}/output_alpha_${alpha}_beta_${beta}_gama_${gama}.txt"
 
+source C:/Users/thoma/Documents/School/Master/MasterProef/codebase/SCDSC/venv/Scripts/activate
+
 # Display the training configuration
 echo "Running Model.py with lnp=${lnp} outp=${outp} alpha=${alpha}, beta=${beta}, and gama=${gama}"
 
 # Run the Python script with arguments and redirect output to a file
-python3 Model.py \
+python Model.py \
     --device_index ${device_index} \
     --dataset ${dataset} \
     --lr ${lr} \

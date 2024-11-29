@@ -304,8 +304,8 @@ if __name__ == "__main__":
         args.n_clusters = 7
         args.n_input = 8
         args.image_size = [130, 130]
-        dataset = Load_my_Dataset("/home/xianlli/dataset/HSI/Houston/Houston_corrected.mat",
-                                  "/home/xianlli/dataset/HSI/Houston/Houston_gt.mat")
+        dataset = Load_my_Dataset("C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/Houston/Houston_corrected.mat",
+                                  "C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/Houston/Houston_gt.mat")
         args.num_sample = dataset.__len__()
     elif args.dataset == 'trento':
         # 0.001
@@ -313,8 +313,8 @@ if __name__ == "__main__":
         args.n_clusters = 6
         args.n_input = 8
         args.image_size = [166, 600]
-        dataset = Load_my_Dataset("/home/xianlli/dataset/HSI/trento/Trento.mat",
-                                  "/home/xianlli/dataset/HSI/trento/Trento_gt.mat")
+        dataset = Load_my_Dataset("C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/trento/Trento.mat",
+                                  "C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/trento/Trento_gt.mat")
         args.num_sample = dataset.__len__()
     elif args.dataset == 'pavia':
         # 0.001
@@ -322,8 +322,8 @@ if __name__ == "__main__":
         args.n_clusters = 9
         args.n_input = 8
         args.image_size = [610, 340]
-        dataset = Load_my_Dataset("/home/xianlli/dataset/HSI/pavia/PaviaU.mat",
-                                  "/home/xianlli/dataset/HSI/pavia/PaviaU_gt.mat")
+        dataset = Load_my_Dataset("C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/pavia/PaviaU.mat",
+                                  "C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/pavia/PaviaU_gt.mat")
         args.num_sample = dataset.__len__()
 
     print(args)

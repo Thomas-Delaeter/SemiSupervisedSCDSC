@@ -1,5 +1,5 @@
 import torch
-assert torch.cuda.is_available()
+# assert torch.cuda.is_available()
 
 def get_initial_value(model, data):
     device = data.device

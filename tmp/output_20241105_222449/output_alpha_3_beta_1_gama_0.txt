@@ -1,0 +1,1683 @@
+hello world2024-11-05 22:24:54.972241
+use cuda: True
+current alpha:  3.0 current beta:  1.0 current gama:  0.0
+x_patches shape: (166, 600, 8, 17, 17), labels: [-1  1  2  3  4  5  6]
+step1ok
+x_patches shape: (166, 600, 8, 7, 7), labels: [-1  1  2  3  4  5  6]
+Namespace(lr=0.005, lnp=20, outp=500, smooth_window_size=7, pre_train_iters=10, n_clusters=6, d=5, hierarchy=1, n_z=32, eta=5, dataset='trento', device_index=0, pretrain_path='weight/trento.pkl', alpha=3.0, beta=1.0, gama=0.0, cuda=True, n_input=8, image_size=[166, 600], num_sample=30214)
+this is 0round
+torch.Size([1568, 6])
+Partition 0: 8510 clusters
+Partition 1: 2018 clusters
+Partition 2: 403 clusters
+Partition 3: 69 clusters
+Partition 4: 11 clusters
+Partition 5: 4 clusters
+Ae(
+  (encoder): Sequential(
+    (cov01): Conv2d(8, 32, kernel_size=(1, 1), stride=(1, 1), padding=same)
+    (bn01): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu01): ReLU(inplace=True)
+    (cov02): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn02): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu02): ReLU(inplace=True)
+    (cov03): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn03): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu03): ReLU(inplace=True)
+  )
+  (decoder): Sequential(
+    (tr01): ConvTranspose2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (rbn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (rre01): ReLU(inplace=True)
+    (tr02): ConvTranspose2d(32, 8, kernel_size=(1, 1), stride=(1, 1))
+  )
+)
+Epoch 0 loss=1.4803
+Epoch 1 loss=0.9357
+Epoch 2 loss=0.7610
+Epoch 3 loss=0.6483
+Epoch 4 loss=0.5618
+Epoch 5 loss=0.4918
+Epoch 6 loss=0.4350
+Epoch 7 loss=0.3885
+Epoch 8 loss=0.3487
+Epoch 9 loss=0.3149
+Model saved to weight/trento.pkl.
+Load pre-trained model from 
+Initial Cluster Centers:  [0 0 0 ... 2 0 1]
+Initialize D
+Shape of D:  (30, 1568)
+Initialization of D Finished
+Iter 0 :Current Acc 0.7739 :Max Acc 0.0000 , Current nmi 0.7425 :Max nmi 0.0000 , Current kappa 0.6836 :Max kappa 0.0000
+total_loss tensor(0.3249, device='cuda:0') reconstr_loss tensor(0.2980, device='cuda:0') kl_loss tensor(0.0069, device='cuda:0')
+tensor(0., device='cuda:0')
+Iter 10 :Current Acc 0.7503 :Max Acc 0.7503 , Current nmi 0.7640 :Max nmi 0.7640 , Current kappa 0.6500 :Max kappa 0.6500
+total_loss tensor(0.3157, device='cuda:0') reconstr_loss tensor(0.2713, device='cuda:0') kl_loss tensor(0.0099, device='cuda:0')
+tensor(0.6792, device='cuda:0')
+Iter 20 :Current Acc 0.7531 :Max Acc 0.7531 , Current nmi 0.7795 :Max nmi 0.7795 , Current kappa 0.6540 :Max kappa 0.6540
+total_loss tensor(0.2341, device='cuda:0') reconstr_loss tensor(0.1903, device='cuda:0') kl_loss tensor(0.0063, device='cuda:0')
+tensor(0.8719, device='cuda:0')
+Iter 30 :Current Acc 0.7532 :Max Acc 0.7532 , Current nmi 0.7822 :Max nmi 0.7822 , Current kappa 0.6543 :Max kappa 0.6543
+total_loss tensor(0.1820, device='cuda:0') reconstr_loss tensor(0.1441, device='cuda:0') kl_loss tensor(0.0051, device='cuda:0')
+tensor(0.9187, device='cuda:0')
+Iter 40 :Current Acc 0.7486 :Max Acc 0.7486 , Current nmi 0.7785 :Max nmi 0.7785 , Current kappa 0.6479 :Max kappa 0.6479
+total_loss tensor(0.1435, device='cuda:0') reconstr_loss tensor(0.1131, device='cuda:0') kl_loss tensor(0.0049, device='cuda:0')
+tensor(0.9347, device='cuda:0')
+Iter 50 :Current Acc 0.7488 :Max Acc 0.7488 , Current nmi 0.7773 :Max nmi 0.7773 , Current kappa 0.6489 :Max kappa 0.6489
+total_loss tensor(0.1158, device='cuda:0') reconstr_loss tensor(0.0912, device='cuda:0') kl_loss tensor(0.0046, device='cuda:0')
+tensor(0.9448, device='cuda:0')
+Iter 60 :Current Acc 0.7495 :Max Acc 0.7495 , Current nmi 0.7780 :Max nmi 0.7780 , Current kappa 0.6498 :Max kappa 0.6498
+total_loss tensor(0.0957, device='cuda:0') reconstr_loss tensor(0.0753, device='cuda:0') kl_loss tensor(0.0041, device='cuda:0')
+tensor(0.9530, device='cuda:0')
+Iter 70 :Current Acc 0.7497 :Max Acc 0.7497 , Current nmi 0.7792 :Max nmi 0.7792 , Current kappa 0.6502 :Max kappa 0.6502
+total_loss tensor(0.0814, device='cuda:0') reconstr_loss tensor(0.0634, device='cuda:0') kl_loss tensor(0.0037, device='cuda:0')
+tensor(0.9660, device='cuda:0')
+Iter 80 :Current Acc 0.7501 :Max Acc 0.7498 , Current nmi 0.7807 :Max nmi 0.7801 , Current kappa 0.6508 :Max kappa 0.6504
+total_loss tensor(0.0771, device='cuda:0') reconstr_loss tensor(0.0603, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9690, device='cuda:0')
+Iter 90 :Current Acc 0.7501 :Max Acc 0.7501 , Current nmi 0.7804 :Max nmi 0.7806 , Current kappa 0.6508 :Max kappa 0.6508
+total_loss tensor(0.0639, device='cuda:0') reconstr_loss tensor(0.0482, device='cuda:0') kl_loss tensor(0.0034, device='cuda:0')
+tensor(0.9724, device='cuda:0')
+Iter 100 :Current Acc 0.7503 :Max Acc 0.7503 , Current nmi 0.7807 :Max nmi 0.7807 , Current kappa 0.6510 :Max kappa 0.6510
+total_loss tensor(0.0633, device='cuda:0') reconstr_loss tensor(0.0486, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9763, device='cuda:0')
+Iter 110 :Current Acc 0.7504 :Max Acc 0.7504 , Current nmi 0.7807 :Max nmi 0.7809 , Current kappa 0.6512 :Max kappa 0.6513
+total_loss tensor(0.0532, device='cuda:0') reconstr_loss tensor(0.0391, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9777, device='cuda:0')
+Iter 120 :Current Acc 0.7507 :Max Acc 0.7507 , Current nmi 0.7814 :Max nmi 0.7815 , Current kappa 0.6516 :Max kappa 0.6516
+total_loss tensor(0.0499, device='cuda:0') reconstr_loss tensor(0.0363, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9797, device='cuda:0')
+Iter 130 :Current Acc 0.7510 :Max Acc 0.7509 , Current nmi 0.7819 :Max nmi 0.7818 , Current kappa 0.6521 :Max kappa 0.6519
+total_loss tensor(0.0464, device='cuda:0') reconstr_loss tensor(0.0333, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9808, device='cuda:0')
+Iter 140 :Current Acc 0.7510 :Max Acc 0.7509 , Current nmi 0.7819 :Max nmi 0.7816 , Current kappa 0.6521 :Max kappa 0.6520
+total_loss tensor(0.0420, device='cuda:0') reconstr_loss tensor(0.0292, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9811, device='cuda:0')
+Iter 150 :Current Acc 0.7512 :Max Acc 0.7512 , Current nmi 0.7818 :Max nmi 0.7818 , Current kappa 0.6524 :Max kappa 0.6524
+total_loss tensor(0.0379, device='cuda:0') reconstr_loss tensor(0.0255, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9821, device='cuda:0')
+Iter 160 :Current Acc 0.7515 :Max Acc 0.7514 , Current nmi 0.7823 :Max nmi 0.7820 , Current kappa 0.6528 :Max kappa 0.6526
+total_loss tensor(0.0405, device='cuda:0') reconstr_loss tensor(0.0283, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9825, device='cuda:0')
+Iter 170 :Current Acc 0.7520 :Max Acc 0.7514 , Current nmi 0.7820 :Max nmi 0.7820 , Current kappa 0.6535 :Max kappa 0.6526
+total_loss tensor(0.0364, device='cuda:0') reconstr_loss tensor(0.0239, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9802, device='cuda:0')
+Iter 180 :Current Acc 0.7533 :Max Acc 0.7514 , Current nmi 0.7815 :Max nmi 0.7820 , Current kappa 0.6553 :Max kappa 0.6526
+total_loss tensor(0.0330, device='cuda:0') reconstr_loss tensor(0.0203, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9781, device='cuda:0')
+Iter 190 :Current Acc 0.7548 :Max Acc 0.7514 , Current nmi 0.7821 :Max nmi 0.7820 , Current kappa 0.6574 :Max kappa 0.6526
+total_loss tensor(0.0345, device='cuda:0') reconstr_loss tensor(0.0217, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9741, device='cuda:0')
+Iter 200 :Current Acc 0.7557 :Max Acc 0.7514 , Current nmi 0.7815 :Max nmi 0.7820 , Current kappa 0.6586 :Max kappa 0.6526
+total_loss tensor(0.0303, device='cuda:0') reconstr_loss tensor(0.0176, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9718, device='cuda:0')
+Iter 210 :Current Acc 0.7578 :Max Acc 0.7514 , Current nmi 0.7805 :Max nmi 0.7820 , Current kappa 0.6615 :Max kappa 0.6526
+total_loss tensor(0.0317, device='cuda:0') reconstr_loss tensor(0.0184, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9536, device='cuda:0')
+Iter 220 :Current Acc 0.7949 :Max Acc 0.7514 , Current nmi 0.7693 :Max nmi 0.7820 , Current kappa 0.7131 :Max kappa 0.6526
+total_loss tensor(0.0398, device='cuda:0') reconstr_loss tensor(0.0225, device='cuda:0') kl_loss tensor(0.0040, device='cuda:0')
+tensor(0.9222, device='cuda:0')
+Iter 230 :Current Acc 0.8028 :Max Acc 0.7514 , Current nmi 0.7749 :Max nmi 0.7820 , Current kappa 0.7243 :Max kappa 0.6526
+total_loss tensor(0.0338, device='cuda:0') reconstr_loss tensor(0.0177, device='cuda:0') kl_loss tensor(0.0037, device='cuda:0')
+tensor(0.9430, device='cuda:0')
+Iter 240 :Current Acc 0.8060 :Max Acc 0.7514 , Current nmi 0.7861 :Max nmi 0.7820 , Current kappa 0.7289 :Max kappa 0.6526
+total_loss tensor(0.0321, device='cuda:0') reconstr_loss tensor(0.0168, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9444, device='cuda:0')
+Iter 250 :Current Acc 0.8063 :Max Acc 0.7514 , Current nmi 0.7867 :Max nmi 0.7820 , Current kappa 0.7294 :Max kappa 0.6526
+total_loss tensor(0.0353, device='cuda:0') reconstr_loss tensor(0.0206, device='cuda:0') kl_loss tensor(0.0034, device='cuda:0')
+tensor(0.9487, device='cuda:0')
+Iter 260 :Current Acc 0.8064 :Max Acc 0.7514 , Current nmi 0.7869 :Max nmi 0.7820 , Current kappa 0.7296 :Max kappa 0.6526
+total_loss tensor(0.0291, device='cuda:0') reconstr_loss tensor(0.0149, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9562, device='cuda:0')
+Iter 270 :Current Acc 0.8061 :Max Acc 0.7514 , Current nmi 0.7866 :Max nmi 0.7820 , Current kappa 0.7292 :Max kappa 0.6526
+total_loss tensor(0.0271, device='cuda:0') reconstr_loss tensor(0.0135, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9584, device='cuda:0')
+Iter 280 :Current Acc 0.8061 :Max Acc 0.7514 , Current nmi 0.7869 :Max nmi 0.7820 , Current kappa 0.7291 :Max kappa 0.6526
+total_loss tensor(0.0294, device='cuda:0') reconstr_loss tensor(0.0162, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9618, device='cuda:0')
+Iter 290 :Current Acc 0.8059 :Max Acc 0.7514 , Current nmi 0.7867 :Max nmi 0.7820 , Current kappa 0.7287 :Max kappa 0.6526
+total_loss tensor(0.0271, device='cuda:0') reconstr_loss tensor(0.0141, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9641, device='cuda:0')
+Iter 300 :Current Acc 0.8057 :Max Acc 0.7514 , Current nmi 0.7866 :Max nmi 0.7820 , Current kappa 0.7286 :Max kappa 0.6526
+total_loss tensor(0.0245, device='cuda:0') reconstr_loss tensor(0.0118, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9661, device='cuda:0')
+Iter 310 :Current Acc 0.8056 :Max Acc 0.7514 , Current nmi 0.7867 :Max nmi 0.7820 , Current kappa 0.7284 :Max kappa 0.6526
+total_loss tensor(0.0236, device='cuda:0') reconstr_loss tensor(0.0111, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9663, device='cuda:0')
+Iter 320 :Current Acc 0.8055 :Max Acc 0.7514 , Current nmi 0.7867 :Max nmi 0.7820 , Current kappa 0.7282 :Max kappa 0.6526
+total_loss tensor(0.0289, device='cuda:0') reconstr_loss tensor(0.0166, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9675, device='cuda:0')
+Iter 330 :Current Acc 0.8055 :Max Acc 0.7514 , Current nmi 0.7867 :Max nmi 0.7820 , Current kappa 0.7283 :Max kappa 0.6526
+total_loss tensor(0.0238, device='cuda:0') reconstr_loss tensor(0.0115, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9699, device='cuda:0')
+Iter 340 :Current Acc 0.8053 :Max Acc 0.7514 , Current nmi 0.7866 :Max nmi 0.7820 , Current kappa 0.7280 :Max kappa 0.6526
+total_loss tensor(0.0222, device='cuda:0') reconstr_loss tensor(0.0101, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9709, device='cuda:0')
+Iter 350 :Current Acc 0.8050 :Max Acc 0.7514 , Current nmi 0.7863 :Max nmi 0.7820 , Current kappa 0.7276 :Max kappa 0.6526
+total_loss tensor(0.0213, device='cuda:0') reconstr_loss tensor(0.0095, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9719, device='cuda:0')
+Iter 360 :Current Acc 0.8048 :Max Acc 0.7514 , Current nmi 0.7865 :Max nmi 0.7820 , Current kappa 0.7273 :Max kappa 0.6526
+total_loss tensor(0.0253, device='cuda:0') reconstr_loss tensor(0.0136, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9713, device='cuda:0')
+Iter 370 :Current Acc 0.8048 :Max Acc 0.7514 , Current nmi 0.7858 :Max nmi 0.7820 , Current kappa 0.7273 :Max kappa 0.6526
+total_loss tensor(0.0217, device='cuda:0') reconstr_loss tensor(0.0101, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9732, device='cuda:0')
+Iter 380 :Current Acc 0.8046 :Max Acc 0.7514 , Current nmi 0.7858 :Max nmi 0.7820 , Current kappa 0.7270 :Max kappa 0.6526
+total_loss tensor(0.0204, device='cuda:0') reconstr_loss tensor(0.0091, device='cuda:0') kl_loss tensor(0.0027, device='cuda:0')
+tensor(0.9736, device='cuda:0')
+Iter 390 :Current Acc 0.8045 :Max Acc 0.7514 , Current nmi 0.7858 :Max nmi 0.7820 , Current kappa 0.7269 :Max kappa 0.6526
+total_loss tensor(0.0196, device='cuda:0') reconstr_loss tensor(0.0084, device='cuda:0') kl_loss tensor(0.0027, device='cuda:0')
+tensor(0.9748, device='cuda:0')
+Iter 399 :Current Acc 0.8046 :Max Acc 0.7514 , Current nmi 0.7860 :Max nmi 0.7820 , Current kappa 0.7270 :Max kappa 0.6526
+total_loss tensor(0.0207, device='cuda:0') reconstr_loss tensor(0.0097, device='cuda:0') kl_loss tensor(0.0027, device='cuda:0')
+tensor(0.9744, device='cuda:0')
+Running time:  244.01981616020203
+this is 1round
+torch.Size([1568, 6])
+Partition 0: 8510 clusters
+Partition 1: 2018 clusters
+Partition 2: 403 clusters
+Partition 3: 69 clusters
+Partition 4: 11 clusters
+Partition 5: 4 clusters
+Ae(
+  (encoder): Sequential(
+    (cov01): Conv2d(8, 32, kernel_size=(1, 1), stride=(1, 1), padding=same)
+    (bn01): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu01): ReLU(inplace=True)
+    (cov02): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn02): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu02): ReLU(inplace=True)
+    (cov03): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn03): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu03): ReLU(inplace=True)
+  )
+  (decoder): Sequential(
+    (tr01): ConvTranspose2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (rbn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (rre01): ReLU(inplace=True)
+    (tr02): ConvTranspose2d(32, 8, kernel_size=(1, 1), stride=(1, 1))
+  )
+)
+Epoch 0 loss=1.1094
+Epoch 1 loss=0.7137
+Epoch 2 loss=0.5774
+Epoch 3 loss=0.4781
+Epoch 4 loss=0.4052
+Epoch 5 loss=0.3487
+Epoch 6 loss=0.3050
+Epoch 7 loss=0.2702
+Epoch 8 loss=0.2415
+Epoch 9 loss=0.2179
+Model saved to weight/trento.pkl.
+Load pre-trained model from 
+Initial Cluster Centers:  [0 0 0 ... 3 0 1]
+Initialize D
+Shape of D:  (30, 1568)
+Initialization of D Finished
+Iter 0 :Current Acc 0.7806 :Max Acc 0.0000 , Current nmi 0.7623 :Max nmi 0.0000 , Current kappa 0.6965 :Max kappa 0.0000
+total_loss tensor(0.2340, device='cuda:0') reconstr_loss tensor(0.2060, device='cuda:0') kl_loss tensor(0.0073, device='cuda:0')
+tensor(0., device='cuda:0')
+Iter 10 :Current Acc 0.8042 :Max Acc 0.8042 , Current nmi 0.7687 :Max nmi 0.7687 , Current kappa 0.7312 :Max kappa 0.7312
+total_loss tensor(0.2563, device='cuda:0') reconstr_loss tensor(0.1975, device='cuda:0') kl_loss tensor(0.0131, device='cuda:0')
+tensor(0.2341, device='cuda:0')
+Iter 20 :Current Acc 0.8560 :Max Acc 0.8560 , Current nmi 0.7940 :Max nmi 0.7940 , Current kappa 0.8050 :Max kappa 0.8050
+total_loss tensor(0.2012, device='cuda:0') reconstr_loss tensor(0.1399, device='cuda:0') kl_loss tensor(0.0111, device='cuda:0')
+tensor(0.4957, device='cuda:0')
+Iter 30 :Current Acc 0.8992 :Max Acc 0.8992 , Current nmi 0.8344 :Max nmi 0.8344 , Current kappa 0.8652 :Max kappa 0.8652
+total_loss tensor(0.1673, device='cuda:0') reconstr_loss tensor(0.1124, device='cuda:0') kl_loss tensor(0.0091, device='cuda:0')
+tensor(0.6024, device='cuda:0')
+Iter 40 :Current Acc 0.9023 :Max Acc 0.9023 , Current nmi 0.8440 :Max nmi 0.8440 , Current kappa 0.8693 :Max kappa 0.8693
+total_loss tensor(0.1386, device='cuda:0') reconstr_loss tensor(0.0923, device='cuda:0') kl_loss tensor(0.0087, device='cuda:0')
+tensor(0.6464, device='cuda:0')
+Iter 50 :Current Acc 0.9091 :Max Acc 0.9091 , Current nmi 0.8604 :Max nmi 0.8604 , Current kappa 0.8784 :Max kappa 0.8784
+total_loss tensor(0.1215, device='cuda:0') reconstr_loss tensor(0.0796, device='cuda:0') kl_loss tensor(0.0091, device='cuda:0')
+tensor(0.6879, device='cuda:0')
+Iter 60 :Current Acc 0.9260 :Max Acc 0.9260 , Current nmi 0.8741 :Max nmi 0.8741 , Current kappa 0.9010 :Max kappa 0.9010
+total_loss tensor(0.1088, device='cuda:0') reconstr_loss tensor(0.0710, device='cuda:0') kl_loss tensor(0.0083, device='cuda:0')
+tensor(0.8111, device='cuda:0')
+Iter 70 :Current Acc 0.9281 :Max Acc 0.9281 , Current nmi 0.8776 :Max nmi 0.8776 , Current kappa 0.9039 :Max kappa 0.9039
+total_loss tensor(0.0927, device='cuda:0') reconstr_loss tensor(0.0614, device='cuda:0') kl_loss tensor(0.0071, device='cuda:0')
+tensor(0.8509, device='cuda:0')
+Iter 80 :Current Acc 0.9304 :Max Acc 0.9304 , Current nmi 0.8826 :Max nmi 0.8826 , Current kappa 0.9069 :Max kappa 0.9069
+total_loss tensor(0.0817, device='cuda:0') reconstr_loss tensor(0.0530, device='cuda:0') kl_loss tensor(0.0064, device='cuda:0')
+tensor(0.8758, device='cuda:0')
+Iter 90 :Current Acc 0.9316 :Max Acc 0.9316 , Current nmi 0.8856 :Max nmi 0.8856 , Current kappa 0.9085 :Max kappa 0.9085
+total_loss tensor(0.0733, device='cuda:0') reconstr_loss tensor(0.0465, device='cuda:0') kl_loss tensor(0.0061, device='cuda:0')
+tensor(0.8902, device='cuda:0')
+Iter 100 :Current Acc 0.9327 :Max Acc 0.9327 , Current nmi 0.8892 :Max nmi 0.8892 , Current kappa 0.9100 :Max kappa 0.9100
+total_loss tensor(0.0677, device='cuda:0') reconstr_loss tensor(0.0421, device='cuda:0') kl_loss tensor(0.0059, device='cuda:0')
+tensor(0.8997, device='cuda:0')
+Iter 110 :Current Acc 0.9334 :Max Acc 0.9334 , Current nmi 0.8915 :Max nmi 0.8915 , Current kappa 0.9109 :Max kappa 0.9109
+total_loss tensor(0.0619, device='cuda:0') reconstr_loss tensor(0.0374, device='cuda:0') kl_loss tensor(0.0057, device='cuda:0')
+tensor(0.9073, device='cuda:0')
+Iter 120 :Current Acc 0.9339 :Max Acc 0.9339 , Current nmi 0.8936 :Max nmi 0.8936 , Current kappa 0.9116 :Max kappa 0.9116
+total_loss tensor(0.0564, device='cuda:0') reconstr_loss tensor(0.0332, device='cuda:0') kl_loss tensor(0.0054, device='cuda:0')
+tensor(0.9144, device='cuda:0')
+Iter 130 :Current Acc 0.9342 :Max Acc 0.9342 , Current nmi 0.8943 :Max nmi 0.8943 , Current kappa 0.9119 :Max kappa 0.9119
+total_loss tensor(0.0525, device='cuda:0') reconstr_loss tensor(0.0304, device='cuda:0') kl_loss tensor(0.0051, device='cuda:0')
+tensor(0.9207, device='cuda:0')
+Iter 140 :Current Acc 0.9348 :Max Acc 0.9348 , Current nmi 0.8965 :Max nmi 0.8965 , Current kappa 0.9128 :Max kappa 0.9128
+total_loss tensor(0.0485, device='cuda:0') reconstr_loss tensor(0.0273, device='cuda:0') kl_loss tensor(0.0050, device='cuda:0')
+tensor(0.9261, device='cuda:0')
+Iter 150 :Current Acc 0.9350 :Max Acc 0.9350 , Current nmi 0.8975 :Max nmi 0.8974 , Current kappa 0.9130 :Max kappa 0.9130
+total_loss tensor(0.0454, device='cuda:0') reconstr_loss tensor(0.0248, device='cuda:0') kl_loss tensor(0.0048, device='cuda:0')
+tensor(0.9297, device='cuda:0')
+Iter 160 :Current Acc 0.9352 :Max Acc 0.9352 , Current nmi 0.8978 :Max nmi 0.8978 , Current kappa 0.9133 :Max kappa 0.9133
+total_loss tensor(0.0441, device='cuda:0') reconstr_loss tensor(0.0244, device='cuda:0') kl_loss tensor(0.0046, device='cuda:0')
+tensor(0.9353, device='cuda:0')
+Iter 170 :Current Acc 0.9354 :Max Acc 0.9354 , Current nmi 0.8990 :Max nmi 0.8990 , Current kappa 0.9135 :Max kappa 0.9135
+total_loss tensor(0.0409, device='cuda:0') reconstr_loss tensor(0.0218, device='cuda:0') kl_loss tensor(0.0045, device='cuda:0')
+tensor(0.9397, device='cuda:0')
+Iter 180 :Current Acc 0.9352 :Max Acc 0.9352 , Current nmi 0.8987 :Max nmi 0.8987 , Current kappa 0.9133 :Max kappa 0.9133
+total_loss tensor(0.0378, device='cuda:0') reconstr_loss tensor(0.0195, device='cuda:0') kl_loss tensor(0.0043, device='cuda:0')
+tensor(0.9446, device='cuda:0')
+Iter 190 :Current Acc 0.9353 :Max Acc 0.9353 , Current nmi 0.8992 :Max nmi 0.8992 , Current kappa 0.9134 :Max kappa 0.9134
+total_loss tensor(0.0381, device='cuda:0') reconstr_loss tensor(0.0204, device='cuda:0') kl_loss tensor(0.0042, device='cuda:0')
+tensor(0.9481, device='cuda:0')
+Iter 200 :Current Acc 0.9360 :Max Acc 0.9359 , Current nmi 0.9009 :Max nmi 0.9008 , Current kappa 0.9143 :Max kappa 0.9143
+total_loss tensor(0.0343, device='cuda:0') reconstr_loss tensor(0.0171, device='cuda:0') kl_loss tensor(0.0041, device='cuda:0')
+tensor(0.9502, device='cuda:0')
+Iter 210 :Current Acc 0.9375 :Max Acc 0.9375 , Current nmi 0.9055 :Max nmi 0.9055 , Current kappa 0.9164 :Max kappa 0.9164
+total_loss tensor(0.0330, device='cuda:0') reconstr_loss tensor(0.0164, device='cuda:0') kl_loss tensor(0.0040, device='cuda:0')
+tensor(0.9534, device='cuda:0')
+Iter 220 :Current Acc 0.9381 :Max Acc 0.9383 , Current nmi 0.9083 :Max nmi 0.9084 , Current kappa 0.9172 :Max kappa 0.9174
+total_loss tensor(0.0341, device='cuda:0') reconstr_loss tensor(0.0178, device='cuda:0') kl_loss tensor(0.0039, device='cuda:0')
+tensor(0.9560, device='cuda:0')
+Iter 230 :Current Acc 0.9383 :Max Acc 0.9383 , Current nmi 0.9086 :Max nmi 0.9088 , Current kappa 0.9175 :Max kappa 0.9175
+total_loss tensor(0.0308, device='cuda:0') reconstr_loss tensor(0.0151, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9591, device='cuda:0')
+Iter 240 :Current Acc 0.9384 :Max Acc 0.9383 , Current nmi 0.9091 :Max nmi 0.9089 , Current kappa 0.9176 :Max kappa 0.9175
+total_loss tensor(0.0287, device='cuda:0') reconstr_loss tensor(0.0136, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9615, device='cuda:0')
+Iter 250 :Current Acc 0.9384 :Max Acc 0.9384 , Current nmi 0.9093 :Max nmi 0.9093 , Current kappa 0.9176 :Max kappa 0.9176
+total_loss tensor(0.0272, device='cuda:0') reconstr_loss tensor(0.0124, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9648, device='cuda:0')
+Iter 260 :Current Acc 0.9382 :Max Acc 0.9383 , Current nmi 0.9093 :Max nmi 0.9093 , Current kappa 0.9174 :Max kappa 0.9175
+total_loss tensor(0.0295, device='cuda:0') reconstr_loss tensor(0.0150, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9641, device='cuda:0')
+Iter 270 :Current Acc 0.9382 :Max Acc 0.9383 , Current nmi 0.9093 :Max nmi 0.9096 , Current kappa 0.9174 :Max kappa 0.9175
+total_loss tensor(0.0268, device='cuda:0') reconstr_loss tensor(0.0126, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9641, device='cuda:0')
+Iter 280 :Current Acc 0.9385 :Max Acc 0.9385 , Current nmi 0.9098 :Max nmi 0.9097 , Current kappa 0.9178 :Max kappa 0.9177
+total_loss tensor(0.0247, device='cuda:0') reconstr_loss tensor(0.0111, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9669, device='cuda:0')
+Iter 290 :Current Acc 0.9385 :Max Acc 0.9386 , Current nmi 0.9099 :Max nmi 0.9100 , Current kappa 0.9178 :Max kappa 0.9179
+total_loss tensor(0.0236, device='cuda:0') reconstr_loss tensor(0.0104, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9689, device='cuda:0')
+Iter 300 :Current Acc 0.9386 :Max Acc 0.9386 , Current nmi 0.9099 :Max nmi 0.9099 , Current kappa 0.9178 :Max kappa 0.9178
+total_loss tensor(0.0243, device='cuda:0') reconstr_loss tensor(0.0114, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9706, device='cuda:0')
+Iter 310 :Current Acc 0.9387 :Max Acc 0.9386 , Current nmi 0.9103 :Max nmi 0.9102 , Current kappa 0.9180 :Max kappa 0.9179
+total_loss tensor(0.0247, device='cuda:0') reconstr_loss tensor(0.0120, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9715, device='cuda:0')
+Iter 320 :Current Acc 0.9388 :Max Acc 0.9388 , Current nmi 0.9104 :Max nmi 0.9104 , Current kappa 0.9182 :Max kappa 0.9182
+total_loss tensor(0.0225, device='cuda:0') reconstr_loss tensor(0.0101, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9730, device='cuda:0')
+Iter 330 :Current Acc 0.9390 :Max Acc 0.9390 , Current nmi 0.9105 :Max nmi 0.9105 , Current kappa 0.9185 :Max kappa 0.9185
+total_loss tensor(0.0211, device='cuda:0') reconstr_loss tensor(0.0090, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9741, device='cuda:0')
+Iter 340 :Current Acc 0.9393 :Max Acc 0.9393 , Current nmi 0.9108 :Max nmi 0.9108 , Current kappa 0.9188 :Max kappa 0.9189
+total_loss tensor(0.0210, device='cuda:0') reconstr_loss tensor(0.0092, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9748, device='cuda:0')
+Iter 350 :Current Acc 0.9393 :Max Acc 0.9393 , Current nmi 0.9108 :Max nmi 0.9107 , Current kappa 0.9188 :Max kappa 0.9188
+total_loss tensor(0.0232, device='cuda:0') reconstr_loss tensor(0.0115, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9759, device='cuda:0')
+Iter 360 :Current Acc 0.9393 :Max Acc 0.9395 , Current nmi 0.9107 :Max nmi 0.9109 , Current kappa 0.9189 :Max kappa 0.9190
+total_loss tensor(0.0199, device='cuda:0') reconstr_loss tensor(0.0084, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9762, device='cuda:0')
+Iter 370 :Current Acc 0.9393 :Max Acc 0.9393 , Current nmi 0.9106 :Max nmi 0.9106 , Current kappa 0.9188 :Max kappa 0.9188
+total_loss tensor(0.0191, device='cuda:0') reconstr_loss tensor(0.0079, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9775, device='cuda:0')
+Iter 380 :Current Acc 0.9394 :Max Acc 0.9392 , Current nmi 0.9108 :Max nmi 0.9106 , Current kappa 0.9190 :Max kappa 0.9187
+total_loss tensor(0.0185, device='cuda:0') reconstr_loss tensor(0.0076, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9781, device='cuda:0')
+Iter 390 :Current Acc 0.9393 :Max Acc 0.9393 , Current nmi 0.9106 :Max nmi 0.9106 , Current kappa 0.9188 :Max kappa 0.9188
+total_loss tensor(0.0207, device='cuda:0') reconstr_loss tensor(0.0100, device='cuda:0') kl_loss tensor(0.0027, device='cuda:0')
+tensor(0.9790, device='cuda:0')
+Iter 399 :Current Acc 0.9395 :Max Acc 0.9394 , Current nmi 0.9108 :Max nmi 0.9108 , Current kappa 0.9190 :Max kappa 0.9190
+total_loss tensor(0.0178, device='cuda:0') reconstr_loss tensor(0.0073, device='cuda:0') kl_loss tensor(0.0027, device='cuda:0')
+tensor(0.9792, device='cuda:0')
+Running time:  240.456289768219
+this is 2round
+torch.Size([1568, 6])
+Partition 0: 8510 clusters
+Partition 1: 2018 clusters
+Partition 2: 403 clusters
+Partition 3: 69 clusters
+Partition 4: 11 clusters
+Partition 5: 4 clusters
+Ae(
+  (encoder): Sequential(
+    (cov01): Conv2d(8, 32, kernel_size=(1, 1), stride=(1, 1), padding=same)
+    (bn01): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu01): ReLU(inplace=True)
+    (cov02): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn02): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu02): ReLU(inplace=True)
+    (cov03): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn03): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu03): ReLU(inplace=True)
+  )
+  (decoder): Sequential(
+    (tr01): ConvTranspose2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (rbn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (rre01): ReLU(inplace=True)
+    (tr02): ConvTranspose2d(32, 8, kernel_size=(1, 1), stride=(1, 1))
+  )
+)
+Epoch 0 loss=1.2268
+Epoch 1 loss=0.7467
+Epoch 2 loss=0.5886
+Epoch 3 loss=0.4910
+Epoch 4 loss=0.4189
+Epoch 5 loss=0.3627
+Epoch 6 loss=0.3188
+Epoch 7 loss=0.2840
+Epoch 8 loss=0.2554
+Epoch 9 loss=0.2328
+Model saved to weight/trento.pkl.
+Load pre-trained model from 
+Initial Cluster Centers:  [4 4 4 ... 5 4 3]
+Initialize D
+Shape of D:  (30, 1568)
+Initialization of D Finished
+Iter 0 :Current Acc 0.7333 :Max Acc 0.0000 , Current nmi 0.6934 :Max nmi 0.0000 , Current kappa 0.6299 :Max kappa 0.0000
+total_loss tensor(0.2524, device='cuda:0') reconstr_loss tensor(0.2210, device='cuda:0') kl_loss tensor(0.0084, device='cuda:0')
+tensor(0., device='cuda:0')
+Iter 10 :Current Acc 0.7529 :Max Acc 0.0000 , Current nmi 0.7832 :Max nmi 0.0000 , Current kappa 0.6542 :Max kappa 0.0000
+total_loss tensor(0.2418, device='cuda:0') reconstr_loss tensor(0.1901, device='cuda:0') kl_loss tensor(0.0101, device='cuda:0')
+tensor(0., device='cuda:0')
+Iter 20 :Current Acc 0.7552 :Max Acc 0.7552 , Current nmi 0.7885 :Max nmi 0.7885 , Current kappa 0.6576 :Max kappa 0.6576
+total_loss tensor(0.1806, device='cuda:0') reconstr_loss tensor(0.1332, device='cuda:0') kl_loss tensor(0.0065, device='cuda:0')
+tensor(0.2775, device='cuda:0')
+Iter 30 :Current Acc 0.7668 :Max Acc 0.7668 , Current nmi 0.7966 :Max nmi 0.7966 , Current kappa 0.6780 :Max kappa 0.6780
+total_loss tensor(0.1459, device='cuda:0') reconstr_loss tensor(0.1040, device='cuda:0') kl_loss tensor(0.0075, device='cuda:0')
+tensor(0.3246, device='cuda:0')
+Iter 40 :Current Acc 0.8711 :Max Acc 0.8711 , Current nmi 0.8607 :Max nmi 0.8607 , Current kappa 0.8276 :Max kappa 0.8276
+total_loss tensor(0.1334, device='cuda:0') reconstr_loss tensor(0.0889, device='cuda:0') kl_loss tensor(0.0085, device='cuda:0')
+tensor(0.7034, device='cuda:0')
+Iter 50 :Current Acc 0.8758 :Max Acc 0.8758 , Current nmi 0.8768 :Max nmi 0.8768 , Current kappa 0.8339 :Max kappa 0.8339
+total_loss tensor(0.1070, device='cuda:0') reconstr_loss tensor(0.0730, device='cuda:0') kl_loss tensor(0.0069, device='cuda:0')
+tensor(0.8005, device='cuda:0')
+Iter 60 :Current Acc 0.8787 :Max Acc 0.8787 , Current nmi 0.8847 :Max nmi 0.8847 , Current kappa 0.8377 :Max kappa 0.8377
+total_loss tensor(0.1001, device='cuda:0') reconstr_loss tensor(0.0738, device='cuda:0') kl_loss tensor(0.0059, device='cuda:0')
+tensor(0.8574, device='cuda:0')
+Iter 70 :Current Acc 0.8817 :Max Acc 0.8817 , Current nmi 0.8939 :Max nmi 0.8939 , Current kappa 0.8418 :Max kappa 0.8418
+total_loss tensor(0.0810, device='cuda:0') reconstr_loss tensor(0.0573, device='cuda:0') kl_loss tensor(0.0053, device='cuda:0')
+tensor(0.8910, device='cuda:0')
+Iter 80 :Current Acc 0.8843 :Max Acc 0.8843 , Current nmi 0.9015 :Max nmi 0.9015 , Current kappa 0.8451 :Max kappa 0.8451
+total_loss tensor(0.0693, device='cuda:0') reconstr_loss tensor(0.0480, device='cuda:0') kl_loss tensor(0.0047, device='cuda:0')
+tensor(0.9179, device='cuda:0')
+Iter 90 :Current Acc 0.8857 :Max Acc 0.8857 , Current nmi 0.9068 :Max nmi 0.9068 , Current kappa 0.8470 :Max kappa 0.8470
+total_loss tensor(0.0617, device='cuda:0') reconstr_loss tensor(0.0424, device='cuda:0') kl_loss tensor(0.0043, device='cuda:0')
+tensor(0.9336, device='cuda:0')
+Iter 100 :Current Acc 0.8867 :Max Acc 0.8867 , Current nmi 0.9106 :Max nmi 0.9106 , Current kappa 0.8483 :Max kappa 0.8483
+total_loss tensor(0.0665, device='cuda:0') reconstr_loss tensor(0.0486, device='cuda:0') kl_loss tensor(0.0041, device='cuda:0')
+tensor(0.9441, device='cuda:0')
+Iter 110 :Current Acc 0.8873 :Max Acc 0.8873 , Current nmi 0.9132 :Max nmi 0.9132 , Current kappa 0.8490 :Max kappa 0.8490
+total_loss tensor(0.0541, device='cuda:0') reconstr_loss tensor(0.0365, device='cuda:0') kl_loss tensor(0.0041, device='cuda:0')
+tensor(0.9494, device='cuda:0')
+Iter 120 :Current Acc 0.8873 :Max Acc 0.8873 , Current nmi 0.9133 :Max nmi 0.9131 , Current kappa 0.8491 :Max kappa 0.8491
+total_loss tensor(0.0474, device='cuda:0') reconstr_loss tensor(0.0309, device='cuda:0') kl_loss tensor(0.0037, device='cuda:0')
+tensor(0.9568, device='cuda:0')
+Iter 130 :Current Acc 0.8874 :Max Acc 0.8874 , Current nmi 0.9139 :Max nmi 0.9139 , Current kappa 0.8492 :Max kappa 0.8492
+total_loss tensor(0.0493, device='cuda:0') reconstr_loss tensor(0.0339, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9640, device='cuda:0')
+Iter 140 :Current Acc 0.8876 :Max Acc 0.8876 , Current nmi 0.9146 :Max nmi 0.9143 , Current kappa 0.8495 :Max kappa 0.8495
+total_loss tensor(0.0413, device='cuda:0') reconstr_loss tensor(0.0264, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9658, device='cuda:0')
+Iter 150 :Current Acc 0.8876 :Max Acc 0.8877 , Current nmi 0.9145 :Max nmi 0.9145 , Current kappa 0.8495 :Max kappa 0.8496
+total_loss tensor(0.0425, device='cuda:0') reconstr_loss tensor(0.0283, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9702, device='cuda:0')
+Iter 160 :Current Acc 0.8878 :Max Acc 0.8878 , Current nmi 0.9159 :Max nmi 0.9145 , Current kappa 0.8497 :Max kappa 0.8497
+total_loss tensor(0.0398, device='cuda:0') reconstr_loss tensor(0.0250, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9668, device='cuda:0')
+Iter 170 :Current Acc 0.8877 :Max Acc 0.8877 , Current nmi 0.9134 :Max nmi 0.9134 , Current kappa 0.8495 :Max kappa 0.8495
+total_loss tensor(0.0352, device='cuda:0') reconstr_loss tensor(0.0213, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9750, device='cuda:0')
+Iter 180 :Current Acc 0.8877 :Max Acc 0.8877 , Current nmi 0.9142 :Max nmi 0.9141 , Current kappa 0.8496 :Max kappa 0.8496
+total_loss tensor(0.0317, device='cuda:0') reconstr_loss tensor(0.0187, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9772, device='cuda:0')
+Iter 190 :Current Acc 0.8879 :Max Acc 0.8878 , Current nmi 0.9148 :Max nmi 0.9136 , Current kappa 0.8498 :Max kappa 0.8497
+total_loss tensor(0.0390, device='cuda:0') reconstr_loss tensor(0.0262, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9790, device='cuda:0')
+Iter 200 :Current Acc 0.8878 :Max Acc 0.8878 , Current nmi 0.9141 :Max nmi 0.9142 , Current kappa 0.8497 :Max kappa 0.8498
+total_loss tensor(0.0312, device='cuda:0') reconstr_loss tensor(0.0185, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9797, device='cuda:0')
+Iter 210 :Current Acc 0.8878 :Max Acc 0.8878 , Current nmi 0.9137 :Max nmi 0.9135 , Current kappa 0.8497 :Max kappa 0.8497
+total_loss tensor(0.0278, device='cuda:0') reconstr_loss tensor(0.0158, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9810, device='cuda:0')
+Iter 220 :Current Acc 0.8878 :Max Acc 0.8878 , Current nmi 0.9134 :Max nmi 0.9134 , Current kappa 0.8497 :Max kappa 0.8497
+total_loss tensor(0.0325, device='cuda:0') reconstr_loss tensor(0.0210, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9838, device='cuda:0')
+Iter 230 :Current Acc 0.8878 :Max Acc 0.8878 , Current nmi 0.9137 :Max nmi 0.9135 , Current kappa 0.8497 :Max kappa 0.8497
+total_loss tensor(0.0260, device='cuda:0') reconstr_loss tensor(0.0148, device='cuda:0') kl_loss tensor(0.0027, device='cuda:0')
+tensor(0.9837, device='cuda:0')
+Iter 240 :Current Acc 0.8878 :Max Acc 0.8878 , Current nmi 0.9136 :Max nmi 0.9136 , Current kappa 0.8498 :Max kappa 0.8498
+total_loss tensor(0.0257, device='cuda:0') reconstr_loss tensor(0.0149, device='cuda:0') kl_loss tensor(0.0027, device='cuda:0')
+tensor(0.9855, device='cuda:0')
+Iter 250 :Current Acc 0.8878 :Max Acc 0.8878 , Current nmi 0.9136 :Max nmi 0.9128 , Current kappa 0.8498 :Max kappa 0.8497
+total_loss tensor(0.0237, device='cuda:0') reconstr_loss tensor(0.0130, device='cuda:0') kl_loss tensor(0.0026, device='cuda:0')
+tensor(0.9850, device='cuda:0')
+Iter 260 :Current Acc 0.8878 :Max Acc 0.8878 , Current nmi 0.9130 :Max nmi 0.9130 , Current kappa 0.8497 :Max kappa 0.8497
+total_loss tensor(0.0228, device='cuda:0') reconstr_loss tensor(0.0124, device='cuda:0') kl_loss tensor(0.0026, device='cuda:0')
+tensor(0.9867, device='cuda:0')
+Iter 270 :Current Acc 0.8878 :Max Acc 0.8878 , Current nmi 0.9132 :Max nmi 0.9128 , Current kappa 0.8498 :Max kappa 0.8497
+total_loss tensor(0.0242, device='cuda:0') reconstr_loss tensor(0.0137, device='cuda:0') kl_loss tensor(0.0026, device='cuda:0')
+tensor(0.9875, device='cuda:0')
+Iter 280 :Current Acc 0.8879 :Max Acc 0.8878 , Current nmi 0.9136 :Max nmi 0.9128 , Current kappa 0.8498 :Max kappa 0.8497
+total_loss tensor(0.0219, device='cuda:0') reconstr_loss tensor(0.0117, device='cuda:0') kl_loss tensor(0.0025, device='cuda:0')
+tensor(0.9864, device='cuda:0')
+Iter 290 :Current Acc 0.8878 :Max Acc 0.8878 , Current nmi 0.9131 :Max nmi 0.9131 , Current kappa 0.8498 :Max kappa 0.8498
+total_loss tensor(0.0215, device='cuda:0') reconstr_loss tensor(0.0115, device='cuda:0') kl_loss tensor(0.0025, device='cuda:0')
+tensor(0.9885, device='cuda:0')
+Iter 300 :Current Acc 0.8879 :Max Acc 0.8879 , Current nmi 0.9138 :Max nmi 0.9132 , Current kappa 0.8498 :Max kappa 0.8498
+total_loss tensor(0.0267, device='cuda:0') reconstr_loss tensor(0.0158, device='cuda:0') kl_loss tensor(0.0027, device='cuda:0')
+tensor(0.9812, device='cuda:0')
+Iter 310 :Current Acc 0.8879 :Max Acc 0.8879 , Current nmi 0.9136 :Max nmi 0.9133 , Current kappa 0.8498 :Max kappa 0.8498
+total_loss tensor(0.0209, device='cuda:0') reconstr_loss tensor(0.0113, device='cuda:0') kl_loss tensor(0.0024, device='cuda:0')
+tensor(0.9875, device='cuda:0')
+Iter 320 :Current Acc 0.8878 :Max Acc 0.8878 , Current nmi 0.9131 :Max nmi 0.9130 , Current kappa 0.8498 :Max kappa 0.8498
+total_loss tensor(0.0192, device='cuda:0') reconstr_loss tensor(0.0099, device='cuda:0') kl_loss tensor(0.0023, device='cuda:0')
+tensor(0.9892, device='cuda:0')
+Iter 330 :Current Acc 0.8878 :Max Acc 0.8879 , Current nmi 0.9131 :Max nmi 0.9132 , Current kappa 0.8498 :Max kappa 0.8498
+total_loss tensor(0.0210, device='cuda:0') reconstr_loss tensor(0.0120, device='cuda:0') kl_loss tensor(0.0023, device='cuda:0')
+tensor(0.9902, device='cuda:0')
+Iter 340 :Current Acc 0.8879 :Max Acc 0.8879 , Current nmi 0.9132 :Max nmi 0.9131 , Current kappa 0.8498 :Max kappa 0.8498
+total_loss tensor(0.0228, device='cuda:0') reconstr_loss tensor(0.0132, device='cuda:0') kl_loss tensor(0.0025, device='cuda:0')
+tensor(0.9909, device='cuda:0')
+Iter 350 :Current Acc 0.8879 :Max Acc 0.8879 , Current nmi 0.9132 :Max nmi 0.9131 , Current kappa 0.8498 :Max kappa 0.8498
+total_loss tensor(0.0190, device='cuda:0') reconstr_loss tensor(0.0099, device='cuda:0') kl_loss tensor(0.0023, device='cuda:0')
+tensor(0.9903, device='cuda:0')
+Iter 360 :Current Acc 0.8879 :Max Acc 0.8879 , Current nmi 0.9131 :Max nmi 0.9131 , Current kappa 0.8498 :Max kappa 0.8498
+total_loss tensor(0.0174, device='cuda:0') reconstr_loss tensor(0.0086, device='cuda:0') kl_loss tensor(0.0022, device='cuda:0')
+tensor(0.9915, device='cuda:0')
+Iter 370 :Current Acc 0.8879 :Max Acc 0.8879 , Current nmi 0.9131 :Max nmi 0.9131 , Current kappa 0.8498 :Max kappa 0.8498
+total_loss tensor(0.0168, device='cuda:0') reconstr_loss tensor(0.0084, device='cuda:0') kl_loss tensor(0.0022, device='cuda:0')
+tensor(0.9917, device='cuda:0')
+Iter 380 :Current Acc 0.8875 :Max Acc 0.8878 , Current nmi 0.9139 :Max nmi 0.9130 , Current kappa 0.8493 :Max kappa 0.8498
+total_loss tensor(0.0296, device='cuda:0') reconstr_loss tensor(0.0152, device='cuda:0') kl_loss tensor(0.0039, device='cuda:0')
+tensor(0.9561, device='cuda:0')
+Iter 390 :Current Acc 0.8878 :Max Acc 0.8878 , Current nmi 0.9130 :Max nmi 0.9130 , Current kappa 0.8497 :Max kappa 0.8498
+total_loss tensor(0.0235, device='cuda:0') reconstr_loss tensor(0.0123, device='cuda:0') kl_loss tensor(0.0026, device='cuda:0')
+tensor(0.9804, device='cuda:0')
+Iter 399 :Current Acc 0.8879 :Max Acc 0.8878 , Current nmi 0.9134 :Max nmi 0.9130 , Current kappa 0.8498 :Max kappa 0.8498
+total_loss tensor(0.0189, device='cuda:0') reconstr_loss tensor(0.0095, device='cuda:0') kl_loss tensor(0.0022, device='cuda:0')
+tensor(0.9882, device='cuda:0')
+Running time:  239.47124814987183
+this is 3round
+torch.Size([1568, 6])
+Partition 0: 8510 clusters
+Partition 1: 2018 clusters
+Partition 2: 403 clusters
+Partition 3: 69 clusters
+Partition 4: 11 clusters
+Partition 5: 4 clusters
+Ae(
+  (encoder): Sequential(
+    (cov01): Conv2d(8, 32, kernel_size=(1, 1), stride=(1, 1), padding=same)
+    (bn01): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu01): ReLU(inplace=True)
+    (cov02): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn02): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu02): ReLU(inplace=True)
+    (cov03): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn03): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu03): ReLU(inplace=True)
+  )
+  (decoder): Sequential(
+    (tr01): ConvTranspose2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (rbn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (rre01): ReLU(inplace=True)
+    (tr02): ConvTranspose2d(32, 8, kernel_size=(1, 1), stride=(1, 1))
+  )
+)
+Epoch 0 loss=1.2515
+Epoch 1 loss=0.7891
+Epoch 2 loss=0.6272
+Epoch 3 loss=0.5283
+Epoch 4 loss=0.4569
+Epoch 5 loss=0.4001
+Epoch 6 loss=0.3530
+Epoch 7 loss=0.3124
+Epoch 8 loss=0.2786
+Epoch 9 loss=0.2497
+Model saved to weight/trento.pkl.
+Load pre-trained model from 
+Initial Cluster Centers:  [3 3 3 ... 3 3 0]
+Initialize D
+Shape of D:  (30, 1568)
+Initialization of D Finished
+Iter 0 :Current Acc 0.7498 :Max Acc 0.0000 , Current nmi 0.7696 :Max nmi 0.0000 , Current kappa 0.6515 :Max kappa 0.0000
+total_loss tensor(0.2574, device='cuda:0') reconstr_loss tensor(0.2344, device='cuda:0') kl_loss tensor(0.0056, device='cuda:0')
+tensor(0., device='cuda:0')
+Iter 10 :Current Acc 0.7593 :Max Acc 0.7593 , Current nmi 0.7754 :Max nmi 0.7754 , Current kappa 0.6657 :Max kappa 0.6657
+total_loss tensor(0.2612, device='cuda:0') reconstr_loss tensor(0.2065, device='cuda:0') kl_loss tensor(0.0135, device='cuda:0')
+tensor(0.4204, device='cuda:0')
+Iter 20 :Current Acc 0.7663 :Max Acc 0.7548 , Current nmi 0.7380 :Max nmi 0.7382 , Current kappa 0.6796 :Max kappa 0.6625
+total_loss tensor(0.1993, device='cuda:0') reconstr_loss tensor(0.1454, device='cuda:0') kl_loss tensor(0.0097, device='cuda:0')
+tensor(0.6693, device='cuda:0')
+Iter 30 :Current Acc 0.8122 :Max Acc 0.8122 , Current nmi 0.7577 :Max nmi 0.7577 , Current kappa 0.7479 :Max kappa 0.7479
+total_loss tensor(0.1646, device='cuda:0') reconstr_loss tensor(0.1136, device='cuda:0') kl_loss tensor(0.0084, device='cuda:0')
+tensor(0.7092, device='cuda:0')
+Iter 40 :Current Acc 0.8521 :Max Acc 0.8521 , Current nmi 0.8171 :Max nmi 0.8171 , Current kappa 0.8015 :Max kappa 0.8015
+total_loss tensor(0.1345, device='cuda:0') reconstr_loss tensor(0.0925, device='cuda:0') kl_loss tensor(0.0077, device='cuda:0')
+tensor(0.7624, device='cuda:0')
+Iter 50 :Current Acc 0.8675 :Max Acc 0.8675 , Current nmi 0.8526 :Max nmi 0.8526 , Current kappa 0.8227 :Max kappa 0.8227
+total_loss tensor(0.1134, device='cuda:0') reconstr_loss tensor(0.0790, device='cuda:0') kl_loss tensor(0.0073, device='cuda:0')
+tensor(0.8283, device='cuda:0')
+Iter 60 :Current Acc 0.8698 :Max Acc 0.8698 , Current nmi 0.8605 :Max nmi 0.8605 , Current kappa 0.8259 :Max kappa 0.8259
+total_loss tensor(0.0956, device='cuda:0') reconstr_loss tensor(0.0668, device='cuda:0') kl_loss tensor(0.0065, device='cuda:0')
+tensor(0.8643, device='cuda:0')
+Iter 70 :Current Acc 0.8718 :Max Acc 0.8718 , Current nmi 0.8669 :Max nmi 0.8669 , Current kappa 0.8285 :Max kappa 0.8285
+total_loss tensor(0.0829, device='cuda:0') reconstr_loss tensor(0.0571, device='cuda:0') kl_loss tensor(0.0058, device='cuda:0')
+tensor(0.8946, device='cuda:0')
+Iter 80 :Current Acc 0.8740 :Max Acc 0.8740 , Current nmi 0.8735 :Max nmi 0.8735 , Current kappa 0.8315 :Max kappa 0.8315
+total_loss tensor(0.0729, device='cuda:0') reconstr_loss tensor(0.0493, device='cuda:0') kl_loss tensor(0.0053, device='cuda:0')
+tensor(0.9099, device='cuda:0')
+Iter 90 :Current Acc 0.8761 :Max Acc 0.8761 , Current nmi 0.8807 :Max nmi 0.8807 , Current kappa 0.8342 :Max kappa 0.8342
+total_loss tensor(0.0648, device='cuda:0') reconstr_loss tensor(0.0431, device='cuda:0') kl_loss tensor(0.0049, device='cuda:0')
+tensor(0.9259, device='cuda:0')
+Iter 100 :Current Acc 0.8778 :Max Acc 0.8778 , Current nmi 0.8875 :Max nmi 0.8875 , Current kappa 0.8364 :Max kappa 0.8364
+total_loss tensor(0.0624, device='cuda:0') reconstr_loss tensor(0.0422, device='cuda:0') kl_loss tensor(0.0047, device='cuda:0')
+tensor(0.9396, device='cuda:0')
+Iter 110 :Current Acc 0.8782 :Max Acc 0.8782 , Current nmi 0.8889 :Max nmi 0.8889 , Current kappa 0.8369 :Max kappa 0.8369
+total_loss tensor(0.0541, device='cuda:0') reconstr_loss tensor(0.0350, device='cuda:0') kl_loss tensor(0.0045, device='cuda:0')
+tensor(0.9501, device='cuda:0')
+Iter 120 :Current Acc 0.8780 :Max Acc 0.8780 , Current nmi 0.8888 :Max nmi 0.8888 , Current kappa 0.8367 :Max kappa 0.8367
+total_loss tensor(0.0488, device='cuda:0') reconstr_loss tensor(0.0309, device='cuda:0') kl_loss tensor(0.0041, device='cuda:0')
+tensor(0.9578, device='cuda:0')
+Iter 130 :Current Acc 0.8780 :Max Acc 0.8779 , Current nmi 0.8891 :Max nmi 0.8888 , Current kappa 0.8367 :Max kappa 0.8366
+total_loss tensor(0.0445, device='cuda:0') reconstr_loss tensor(0.0277, device='cuda:0') kl_loss tensor(0.0039, device='cuda:0')
+tensor(0.9626, device='cuda:0')
+Iter 140 :Current Acc 0.8779 :Max Acc 0.8779 , Current nmi 0.8892 :Max nmi 0.8891 , Current kappa 0.8366 :Max kappa 0.8366
+total_loss tensor(0.0417, device='cuda:0') reconstr_loss tensor(0.0255, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9659, device='cuda:0')
+Iter 150 :Current Acc 0.8779 :Max Acc 0.8779 , Current nmi 0.8893 :Max nmi 0.8891 , Current kappa 0.8366 :Max kappa 0.8365
+total_loss tensor(0.0388, device='cuda:0') reconstr_loss tensor(0.0231, device='cuda:0') kl_loss tensor(0.0037, device='cuda:0')
+tensor(0.9687, device='cuda:0')
+Iter 160 :Current Acc 0.8779 :Max Acc 0.8779 , Current nmi 0.8897 :Max nmi 0.8897 , Current kappa 0.8366 :Max kappa 0.8366
+total_loss tensor(0.0376, device='cuda:0') reconstr_loss tensor(0.0225, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9719, device='cuda:0')
+Iter 170 :Current Acc 0.8780 :Max Acc 0.8780 , Current nmi 0.8901 :Max nmi 0.8901 , Current kappa 0.8367 :Max kappa 0.8367
+total_loss tensor(0.0371, device='cuda:0') reconstr_loss tensor(0.0224, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9753, device='cuda:0')
+Iter 180 :Current Acc 0.8779 :Max Acc 0.8779 , Current nmi 0.8900 :Max nmi 0.8900 , Current kappa 0.8366 :Max kappa 0.8366
+total_loss tensor(0.0329, device='cuda:0') reconstr_loss tensor(0.0186, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9747, device='cuda:0')
+Iter 190 :Current Acc 0.8779 :Max Acc 0.8779 , Current nmi 0.8899 :Max nmi 0.8902 , Current kappa 0.8365 :Max kappa 0.8366
+total_loss tensor(0.0303, device='cuda:0') reconstr_loss tensor(0.0165, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9772, device='cuda:0')
+Iter 200 :Current Acc 0.8779 :Max Acc 0.8779 , Current nmi 0.8901 :Max nmi 0.8901 , Current kappa 0.8366 :Max kappa 0.8366
+total_loss tensor(0.0292, device='cuda:0') reconstr_loss tensor(0.0158, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9788, device='cuda:0')
+Iter 210 :Current Acc 0.8779 :Max Acc 0.8779 , Current nmi 0.8902 :Max nmi 0.8905 , Current kappa 0.8366 :Max kappa 0.8366
+total_loss tensor(0.0304, device='cuda:0') reconstr_loss tensor(0.0171, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9801, device='cuda:0')
+Iter 220 :Current Acc 0.8779 :Max Acc 0.8779 , Current nmi 0.8904 :Max nmi 0.8904 , Current kappa 0.8366 :Max kappa 0.8366
+total_loss tensor(0.0272, device='cuda:0') reconstr_loss tensor(0.0144, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9814, device='cuda:0')
+Iter 230 :Current Acc 0.8778 :Max Acc 0.8778 , Current nmi 0.8903 :Max nmi 0.8903 , Current kappa 0.8365 :Max kappa 0.8365
+total_loss tensor(0.0252, device='cuda:0') reconstr_loss tensor(0.0128, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9825, device='cuda:0')
+Iter 240 :Current Acc 0.8776 :Max Acc 0.8776 , Current nmi 0.8899 :Max nmi 0.8899 , Current kappa 0.8362 :Max kappa 0.8362
+total_loss tensor(0.0271, device='cuda:0') reconstr_loss tensor(0.0151, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9832, device='cuda:0')
+Iter 250 :Current Acc 0.8776 :Max Acc 0.8776 , Current nmi 0.8900 :Max nmi 0.8902 , Current kappa 0.8361 :Max kappa 0.8362
+total_loss tensor(0.0243, device='cuda:0') reconstr_loss tensor(0.0124, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9840, device='cuda:0')
+Iter 260 :Current Acc 0.8776 :Max Acc 0.8776 , Current nmi 0.8902 :Max nmi 0.8902 , Current kappa 0.8362 :Max kappa 0.8362
+total_loss tensor(0.0229, device='cuda:0') reconstr_loss tensor(0.0111, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9848, device='cuda:0')
+Iter 270 :Current Acc 0.8776 :Max Acc 0.8776 , Current nmi 0.8903 :Max nmi 0.8903 , Current kappa 0.8362 :Max kappa 0.8362
+total_loss tensor(0.0215, device='cuda:0') reconstr_loss tensor(0.0102, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9849, device='cuda:0')
+Iter 280 :Current Acc 0.8776 :Max Acc 0.8776 , Current nmi 0.8903 :Max nmi 0.8903 , Current kappa 0.8362 :Max kappa 0.8362
+total_loss tensor(0.0208, device='cuda:0') reconstr_loss tensor(0.0098, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9858, device='cuda:0')
+Iter 290 :Current Acc 0.8775 :Max Acc 0.8775 , Current nmi 0.8902 :Max nmi 0.8903 , Current kappa 0.8360 :Max kappa 0.8361
+total_loss tensor(0.0245, device='cuda:0') reconstr_loss tensor(0.0132, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9869, device='cuda:0')
+Iter 300 :Current Acc 0.8775 :Max Acc 0.8775 , Current nmi 0.8903 :Max nmi 0.8903 , Current kappa 0.8361 :Max kappa 0.8361
+total_loss tensor(0.0216, device='cuda:0') reconstr_loss tensor(0.0107, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9859, device='cuda:0')
+Iter 310 :Current Acc 0.8774 :Max Acc 0.8774 , Current nmi 0.8902 :Max nmi 0.8902 , Current kappa 0.8359 :Max kappa 0.8359
+total_loss tensor(0.0195, device='cuda:0') reconstr_loss tensor(0.0089, device='cuda:0') kl_loss tensor(0.0027, device='cuda:0')
+tensor(0.9872, device='cuda:0')
+Iter 320 :Current Acc 0.8774 :Max Acc 0.8774 , Current nmi 0.8902 :Max nmi 0.8902 , Current kappa 0.8359 :Max kappa 0.8359
+total_loss tensor(0.0182, device='cuda:0') reconstr_loss tensor(0.0081, device='cuda:0') kl_loss tensor(0.0026, device='cuda:0')
+tensor(0.9874, device='cuda:0')
+Iter 330 :Current Acc 0.8773 :Max Acc 0.8773 , Current nmi 0.8902 :Max nmi 0.8902 , Current kappa 0.8358 :Max kappa 0.8358
+total_loss tensor(0.0178, device='cuda:0') reconstr_loss tensor(0.0079, device='cuda:0') kl_loss tensor(0.0026, device='cuda:0')
+tensor(0.9881, device='cuda:0')
+Iter 340 :Current Acc 0.8773 :Max Acc 0.8773 , Current nmi 0.8901 :Max nmi 0.8901 , Current kappa 0.8358 :Max kappa 0.8358
+total_loss tensor(0.0192, device='cuda:0') reconstr_loss tensor(0.0093, device='cuda:0') kl_loss tensor(0.0026, device='cuda:0')
+tensor(0.9882, device='cuda:0')
+Iter 350 :Current Acc 0.8773 :Max Acc 0.8773 , Current nmi 0.8901 :Max nmi 0.8901 , Current kappa 0.8358 :Max kappa 0.8358
+total_loss tensor(0.0171, device='cuda:0') reconstr_loss tensor(0.0073, device='cuda:0') kl_loss tensor(0.0025, device='cuda:0')
+tensor(0.9886, device='cuda:0')
+Iter 360 :Current Acc 0.8771 :Max Acc 0.8773 , Current nmi 0.8901 :Max nmi 0.8901 , Current kappa 0.8355 :Max kappa 0.8358
+total_loss tensor(0.0165, device='cuda:0') reconstr_loss tensor(0.0069, device='cuda:0') kl_loss tensor(0.0025, device='cuda:0')
+tensor(0.9885, device='cuda:0')
+Iter 370 :Current Acc 0.8762 :Max Acc 0.8773 , Current nmi 0.8897 :Max nmi 0.8901 , Current kappa 0.8343 :Max kappa 0.8358
+total_loss tensor(0.0162, device='cuda:0') reconstr_loss tensor(0.0065, device='cuda:0') kl_loss tensor(0.0025, device='cuda:0')
+tensor(0.9873, device='cuda:0')
+Iter 380 :Current Acc 0.8748 :Max Acc 0.8773 , Current nmi 0.8890 :Max nmi 0.8901 , Current kappa 0.8323 :Max kappa 0.8358
+total_loss tensor(0.0196, device='cuda:0') reconstr_loss tensor(0.0094, device='cuda:0') kl_loss tensor(0.0027, device='cuda:0')
+tensor(0.9816, device='cuda:0')
+Iter 390 :Current Acc 0.8742 :Max Acc 0.8773 , Current nmi 0.8867 :Max nmi 0.8901 , Current kappa 0.8315 :Max kappa 0.8358
+total_loss tensor(0.0179, device='cuda:0') reconstr_loss tensor(0.0074, device='cuda:0') kl_loss tensor(0.0027, device='cuda:0')
+tensor(0.9786, device='cuda:0')
+Iter 399 :Current Acc 0.8758 :Max Acc 0.8773 , Current nmi 0.8775 :Max nmi 0.8901 , Current kappa 0.8336 :Max kappa 0.8358
+total_loss tensor(0.0196, device='cuda:0') reconstr_loss tensor(0.0069, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9481, device='cuda:0')
+Running time:  244.26594805717468
+this is 4round
+torch.Size([1568, 6])
+Partition 0: 8510 clusters
+Partition 1: 2018 clusters
+Partition 2: 403 clusters
+Partition 3: 69 clusters
+Partition 4: 11 clusters
+Partition 5: 4 clusters
+Ae(
+  (encoder): Sequential(
+    (cov01): Conv2d(8, 32, kernel_size=(1, 1), stride=(1, 1), padding=same)
+    (bn01): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu01): ReLU(inplace=True)
+    (cov02): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn02): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu02): ReLU(inplace=True)
+    (cov03): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn03): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu03): ReLU(inplace=True)
+  )
+  (decoder): Sequential(
+    (tr01): ConvTranspose2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (rbn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (rre01): ReLU(inplace=True)
+    (tr02): ConvTranspose2d(32, 8, kernel_size=(1, 1), stride=(1, 1))
+  )
+)
+Epoch 0 loss=1.1391
+Epoch 1 loss=0.6922
+Epoch 2 loss=0.5535
+Epoch 3 loss=0.4562
+Epoch 4 loss=0.3901
+Epoch 5 loss=0.3400
+Epoch 6 loss=0.3008
+Epoch 7 loss=0.2699
+Epoch 8 loss=0.2440
+Epoch 9 loss=0.2228
+Model saved to weight/trento.pkl.
+Load pre-trained model from 
+Initial Cluster Centers:  [1 1 1 ... 4 1 2]
+Initialize D
+Shape of D:  (30, 1568)
+Initialization of D Finished
+Iter 0 :Current Acc 0.7734 :Max Acc 0.0000 , Current nmi 0.7624 :Max nmi 0.0000 , Current kappa 0.6874 :Max kappa 0.0000
+total_loss tensor(0.2402, device='cuda:0') reconstr_loss tensor(0.2113, device='cuda:0') kl_loss tensor(0.0076, device='cuda:0')
+tensor(0., device='cuda:0')
+Iter 10 :Current Acc 0.8078 :Max Acc 0.8078 , Current nmi 0.7559 :Max nmi 0.7559 , Current kappa 0.7375 :Max kappa 0.7375
+total_loss tensor(0.2676, device='cuda:0') reconstr_loss tensor(0.2016, device='cuda:0') kl_loss tensor(0.0167, device='cuda:0')
+tensor(0.2039, device='cuda:0')
+Iter 20 :Current Acc 0.8716 :Max Acc 0.8716 , Current nmi 0.8464 :Max nmi 0.8464 , Current kappa 0.8279 :Max kappa 0.8279
+total_loss tensor(0.2027, device='cuda:0') reconstr_loss tensor(0.1448, device='cuda:0') kl_loss tensor(0.0100, device='cuda:0')
+tensor(0.6939, device='cuda:0')
+Iter 30 :Current Acc 0.8763 :Max Acc 0.8763 , Current nmi 0.8645 :Max nmi 0.8645 , Current kappa 0.8344 :Max kappa 0.8344
+total_loss tensor(0.1617, device='cuda:0') reconstr_loss tensor(0.1112, device='cuda:0') kl_loss tensor(0.0077, device='cuda:0')
+tensor(0.7960, device='cuda:0')
+Iter 40 :Current Acc 0.8774 :Max Acc 0.8774 , Current nmi 0.8733 :Max nmi 0.8733 , Current kappa 0.8360 :Max kappa 0.8360
+total_loss tensor(0.1287, device='cuda:0') reconstr_loss tensor(0.0898, device='cuda:0') kl_loss tensor(0.0068, device='cuda:0')
+tensor(0.8363, device='cuda:0')
+Iter 50 :Current Acc 0.8770 :Max Acc 0.8770 , Current nmi 0.8825 :Max nmi 0.8825 , Current kappa 0.8354 :Max kappa 0.8354
+total_loss tensor(0.1061, device='cuda:0') reconstr_loss tensor(0.0750, device='cuda:0') kl_loss tensor(0.0064, device='cuda:0')
+tensor(0.8649, device='cuda:0')
+Iter 60 :Current Acc 0.8781 :Max Acc 0.8781 , Current nmi 0.8899 :Max nmi 0.8899 , Current kappa 0.8368 :Max kappa 0.8368
+total_loss tensor(0.0910, device='cuda:0') reconstr_loss tensor(0.0647, device='cuda:0') kl_loss tensor(0.0057, device='cuda:0')
+tensor(0.8979, device='cuda:0')
+Iter 70 :Current Acc 0.8802 :Max Acc 0.8802 , Current nmi 0.8986 :Max nmi 0.8986 , Current kappa 0.8396 :Max kappa 0.8396
+total_loss tensor(0.0792, device='cuda:0') reconstr_loss tensor(0.0555, device='cuda:0') kl_loss tensor(0.0053, device='cuda:0')
+tensor(0.9148, device='cuda:0')
+Iter 80 :Current Acc 0.8808 :Max Acc 0.8808 , Current nmi 0.9031 :Max nmi 0.9031 , Current kappa 0.8404 :Max kappa 0.8404
+total_loss tensor(0.0697, device='cuda:0') reconstr_loss tensor(0.0481, device='cuda:0') kl_loss tensor(0.0048, device='cuda:0')
+tensor(0.9287, device='cuda:0')
+Iter 90 :Current Acc 0.8808 :Max Acc 0.8807 , Current nmi 0.9057 :Max nmi 0.9052 , Current kappa 0.8405 :Max kappa 0.8403
+total_loss tensor(0.0714, device='cuda:0') reconstr_loss tensor(0.0507, device='cuda:0') kl_loss tensor(0.0048, device='cuda:0')
+tensor(0.9391, device='cuda:0')
+Iter 100 :Current Acc 0.8812 :Max Acc 0.8812 , Current nmi 0.9048 :Max nmi 0.9051 , Current kappa 0.8413 :Max kappa 0.8412
+total_loss tensor(0.0592, device='cuda:0') reconstr_loss tensor(0.0388, device='cuda:0') kl_loss tensor(0.0048, device='cuda:0')
+tensor(0.9454, device='cuda:0')
+Iter 110 :Current Acc 0.8818 :Max Acc 0.8818 , Current nmi 0.9055 :Max nmi 0.9055 , Current kappa 0.8420 :Max kappa 0.8420
+total_loss tensor(0.0537, device='cuda:0') reconstr_loss tensor(0.0346, device='cuda:0') kl_loss tensor(0.0044, device='cuda:0')
+tensor(0.9518, device='cuda:0')
+Iter 120 :Current Acc 0.8820 :Max Acc 0.8820 , Current nmi 0.9062 :Max nmi 0.9062 , Current kappa 0.8423 :Max kappa 0.8423
+total_loss tensor(0.0563, device='cuda:0') reconstr_loss tensor(0.0380, device='cuda:0') kl_loss tensor(0.0043, device='cuda:0')
+tensor(0.9590, device='cuda:0')
+Iter 130 :Current Acc 0.8822 :Max Acc 0.8822 , Current nmi 0.9063 :Max nmi 0.9063 , Current kappa 0.8426 :Max kappa 0.8426
+total_loss tensor(0.0474, device='cuda:0') reconstr_loss tensor(0.0294, device='cuda:0') kl_loss tensor(0.0042, device='cuda:0')
+tensor(0.9610, device='cuda:0')
+Iter 140 :Current Acc 0.8825 :Max Acc 0.8825 , Current nmi 0.9064 :Max nmi 0.9064 , Current kappa 0.8429 :Max kappa 0.8429
+total_loss tensor(0.0436, device='cuda:0') reconstr_loss tensor(0.0267, device='cuda:0') kl_loss tensor(0.0040, device='cuda:0')
+tensor(0.9642, device='cuda:0')
+Iter 150 :Current Acc 0.8826 :Max Acc 0.8826 , Current nmi 0.9067 :Max nmi 0.9068 , Current kappa 0.8431 :Max kappa 0.8431
+total_loss tensor(0.0448, device='cuda:0') reconstr_loss tensor(0.0287, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9662, device='cuda:0')
+Iter 160 :Current Acc 0.8827 :Max Acc 0.8828 , Current nmi 0.9071 :Max nmi 0.9073 , Current kappa 0.8432 :Max kappa 0.8434
+total_loss tensor(0.0411, device='cuda:0') reconstr_loss tensor(0.0251, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9690, device='cuda:0')
+Iter 170 :Current Acc 0.8829 :Max Acc 0.8829 , Current nmi 0.9074 :Max nmi 0.9074 , Current kappa 0.8435 :Max kappa 0.8435
+total_loss tensor(0.0362, device='cuda:0') reconstr_loss tensor(0.0209, device='cuda:0') kl_loss tensor(0.0037, device='cuda:0')
+tensor(0.9703, device='cuda:0')
+Iter 180 :Current Acc 0.8830 :Max Acc 0.8829 , Current nmi 0.9071 :Max nmi 0.9071 , Current kappa 0.8436 :Max kappa 0.8436
+total_loss tensor(0.0348, device='cuda:0') reconstr_loss tensor(0.0201, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9725, device='cuda:0')
+Iter 190 :Current Acc 0.8830 :Max Acc 0.8830 , Current nmi 0.9075 :Max nmi 0.9075 , Current kappa 0.8437 :Max kappa 0.8437
+total_loss tensor(0.0362, device='cuda:0') reconstr_loss tensor(0.0216, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9747, device='cuda:0')
+Iter 200 :Current Acc 0.8830 :Max Acc 0.8830 , Current nmi 0.9076 :Max nmi 0.9074 , Current kappa 0.8436 :Max kappa 0.8436
+total_loss tensor(0.0320, device='cuda:0') reconstr_loss tensor(0.0178, device='cuda:0') kl_loss tensor(0.0034, device='cuda:0')
+tensor(0.9750, device='cuda:0')
+Iter 210 :Current Acc 0.8832 :Max Acc 0.8832 , Current nmi 0.9078 :Max nmi 0.9078 , Current kappa 0.8439 :Max kappa 0.8439
+total_loss tensor(0.0298, device='cuda:0') reconstr_loss tensor(0.0161, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9768, device='cuda:0')
+Iter 220 :Current Acc 0.8832 :Max Acc 0.8831 , Current nmi 0.9078 :Max nmi 0.9076 , Current kappa 0.8440 :Max kappa 0.8438
+total_loss tensor(0.0293, device='cuda:0') reconstr_loss tensor(0.0161, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9772, device='cuda:0')
+Iter 230 :Current Acc 0.8832 :Max Acc 0.8832 , Current nmi 0.9080 :Max nmi 0.9081 , Current kappa 0.8439 :Max kappa 0.8440
+total_loss tensor(0.0331, device='cuda:0') reconstr_loss tensor(0.0198, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9787, device='cuda:0')
+Iter 240 :Current Acc 0.8833 :Max Acc 0.8832 , Current nmi 0.9078 :Max nmi 0.9077 , Current kappa 0.8441 :Max kappa 0.8439
+total_loss tensor(0.0290, device='cuda:0') reconstr_loss tensor(0.0160, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9793, device='cuda:0')
+Iter 250 :Current Acc 0.8832 :Max Acc 0.8832 , Current nmi 0.9080 :Max nmi 0.9076 , Current kappa 0.8440 :Max kappa 0.8439
+total_loss tensor(0.0262, device='cuda:0') reconstr_loss tensor(0.0135, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9798, device='cuda:0')
+Iter 260 :Current Acc 0.8833 :Max Acc 0.8833 , Current nmi 0.9076 :Max nmi 0.9076 , Current kappa 0.8440 :Max kappa 0.8440
+total_loss tensor(0.0245, device='cuda:0') reconstr_loss tensor(0.0123, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9812, device='cuda:0')
+Iter 270 :Current Acc 0.8832 :Max Acc 0.8832 , Current nmi 0.9080 :Max nmi 0.9075 , Current kappa 0.8440 :Max kappa 0.8439
+total_loss tensor(0.0342, device='cuda:0') reconstr_loss tensor(0.0218, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9806, device='cuda:0')
+Iter 280 :Current Acc 0.8840 :Max Acc 0.8832 , Current nmi 0.9070 :Max nmi 0.9075 , Current kappa 0.8450 :Max kappa 0.8439
+total_loss tensor(0.0270, device='cuda:0') reconstr_loss tensor(0.0144, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9801, device='cuda:0')
+Iter 290 :Current Acc 0.8847 :Max Acc 0.8832 , Current nmi 0.9065 :Max nmi 0.9075 , Current kappa 0.8459 :Max kappa 0.8439
+total_loss tensor(0.0249, device='cuda:0') reconstr_loss tensor(0.0121, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9783, device='cuda:0')
+Iter 300 :Current Acc 0.8853 :Max Acc 0.8832 , Current nmi 0.9064 :Max nmi 0.9075 , Current kappa 0.8467 :Max kappa 0.8439
+total_loss tensor(0.0235, device='cuda:0') reconstr_loss tensor(0.0110, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9762, device='cuda:0')
+Iter 310 :Current Acc 0.8859 :Max Acc 0.8832 , Current nmi 0.9056 :Max nmi 0.9075 , Current kappa 0.8475 :Max kappa 0.8439
+total_loss tensor(0.0228, device='cuda:0') reconstr_loss tensor(0.0103, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9707, device='cuda:0')
+Iter 320 :Current Acc 0.9221 :Max Acc 0.8832 , Current nmi 0.8940 :Max nmi 0.9075 , Current kappa 0.8958 :Max kappa 0.8439
+total_loss tensor(0.0339, device='cuda:0') reconstr_loss tensor(0.0172, device='cuda:0') kl_loss tensor(0.0043, device='cuda:0')
+tensor(0.8960, device='cuda:0')
+Iter 330 :Current Acc 0.9300 :Max Acc 0.8832 , Current nmi 0.8936 :Max nmi 0.9075 , Current kappa 0.9064 :Max kappa 0.8439
+total_loss tensor(0.0310, device='cuda:0') reconstr_loss tensor(0.0138, device='cuda:0') kl_loss tensor(0.0040, device='cuda:0')
+tensor(0.9254, device='cuda:0')
+Iter 340 :Current Acc 0.9357 :Max Acc 0.8832 , Current nmi 0.8978 :Max nmi 0.9075 , Current kappa 0.9139 :Max kappa 0.8439
+total_loss tensor(0.0274, device='cuda:0') reconstr_loss tensor(0.0119, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9497, device='cuda:0')
+Iter 350 :Current Acc 0.9373 :Max Acc 0.8832 , Current nmi 0.9004 :Max nmi 0.9075 , Current kappa 0.9161 :Max kappa 0.8439
+total_loss tensor(0.0247, device='cuda:0') reconstr_loss tensor(0.0105, device='cuda:0') kl_loss tensor(0.0034, device='cuda:0')
+tensor(0.9574, device='cuda:0')
+Iter 360 :Current Acc 0.9374 :Max Acc 0.8832 , Current nmi 0.9014 :Max nmi 0.9075 , Current kappa 0.9163 :Max kappa 0.8439
+total_loss tensor(0.0253, device='cuda:0') reconstr_loss tensor(0.0118, device='cuda:0') kl_loss tensor(0.0034, device='cuda:0')
+tensor(0.9592, device='cuda:0')
+Iter 370 :Current Acc 0.9381 :Max Acc 0.8832 , Current nmi 0.9025 :Max nmi 0.9075 , Current kappa 0.9172 :Max kappa 0.8439
+total_loss tensor(0.0234, device='cuda:0') reconstr_loss tensor(0.0102, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9617, device='cuda:0')
+Iter 380 :Current Acc 0.9414 :Max Acc 0.8832 , Current nmi 0.9116 :Max nmi 0.9075 , Current kappa 0.9216 :Max kappa 0.8439
+total_loss tensor(0.0219, device='cuda:0') reconstr_loss tensor(0.0090, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9635, device='cuda:0')
+Iter 390 :Current Acc 0.9416 :Max Acc 0.8832 , Current nmi 0.9116 :Max nmi 0.9075 , Current kappa 0.9219 :Max kappa 0.8439
+total_loss tensor(0.0212, device='cuda:0') reconstr_loss tensor(0.0087, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9662, device='cuda:0')
+Iter 399 :Current Acc 0.9417 :Max Acc 0.8832 , Current nmi 0.9115 :Max nmi 0.9075 , Current kappa 0.9221 :Max kappa 0.8439
+total_loss tensor(0.0255, device='cuda:0') reconstr_loss tensor(0.0131, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9696, device='cuda:0')
+Running time:  239.2096929550171
+this is 5round
+torch.Size([1568, 6])
+Partition 0: 8510 clusters
+Partition 1: 2018 clusters
+Partition 2: 403 clusters
+Partition 3: 69 clusters
+Partition 4: 11 clusters
+Partition 5: 4 clusters
+Ae(
+  (encoder): Sequential(
+    (cov01): Conv2d(8, 32, kernel_size=(1, 1), stride=(1, 1), padding=same)
+    (bn01): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu01): ReLU(inplace=True)
+    (cov02): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn02): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu02): ReLU(inplace=True)
+    (cov03): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn03): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu03): ReLU(inplace=True)
+  )
+  (decoder): Sequential(
+    (tr01): ConvTranspose2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (rbn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (rre01): ReLU(inplace=True)
+    (tr02): ConvTranspose2d(32, 8, kernel_size=(1, 1), stride=(1, 1))
+  )
+)
+Epoch 0 loss=1.6305
+Epoch 1 loss=1.0074
+Epoch 2 loss=0.8580
+Epoch 3 loss=0.7574
+Epoch 4 loss=0.6709
+Epoch 5 loss=0.5912
+Epoch 6 loss=0.5198
+Epoch 7 loss=0.4589
+Epoch 8 loss=0.4085
+Epoch 9 loss=0.3648
+Model saved to weight/trento.pkl.
+Load pre-trained model from 
+Initial Cluster Centers:  [3 3 3 ... 3 3 1]
+Initialize D
+Shape of D:  (30, 1568)
+Initialization of D Finished
+Iter 0 :Current Acc 0.7388 :Max Acc 0.0000 , Current nmi 0.7118 :Max nmi 0.0000 , Current kappa 0.6320 :Max kappa 0.0000
+total_loss tensor(0.3659, device='cuda:0') reconstr_loss tensor(0.3421, device='cuda:0') kl_loss tensor(0.0056, device='cuda:0')
+tensor(0., device='cuda:0')
+Iter 10 :Current Acc 0.7518 :Max Acc 0.7518 , Current nmi 0.7299 :Max nmi 0.7299 , Current kappa 0.6515 :Max kappa 0.6515
+total_loss tensor(0.2813, device='cuda:0') reconstr_loss tensor(0.2357, device='cuda:0') kl_loss tensor(0.0100, device='cuda:0')
+tensor(0.6194, device='cuda:0')
+Iter 20 :Current Acc 0.7523 :Max Acc 0.7523 , Current nmi 0.7765 :Max nmi 0.7765 , Current kappa 0.6529 :Max kappa 0.6529
+total_loss tensor(0.2035, device='cuda:0') reconstr_loss tensor(0.1594, device='cuda:0') kl_loss tensor(0.0061, device='cuda:0')
+tensor(0.7327, device='cuda:0')
+Iter 30 :Current Acc 0.7581 :Max Acc 0.7581 , Current nmi 0.7601 :Max nmi 0.7601 , Current kappa 0.6612 :Max kappa 0.6612
+total_loss tensor(0.1558, device='cuda:0') reconstr_loss tensor(0.1181, device='cuda:0') kl_loss tensor(0.0055, device='cuda:0')
+tensor(0.7632, device='cuda:0')
+Iter 40 :Current Acc 0.7949 :Max Acc 0.7949 , Current nmi 0.7586 :Max nmi 0.7586 , Current kappa 0.7132 :Max kappa 0.7132
+total_loss tensor(0.1298, device='cuda:0') reconstr_loss tensor(0.0937, device='cuda:0') kl_loss tensor(0.0073, device='cuda:0')
+tensor(0.7754, device='cuda:0')
+Iter 50 :Current Acc 0.7947 :Max Acc 0.7947 , Current nmi 0.7624 :Max nmi 0.7624 , Current kappa 0.7131 :Max kappa 0.7131
+total_loss tensor(0.1093, device='cuda:0') reconstr_loss tensor(0.0767, device='cuda:0') kl_loss tensor(0.0065, device='cuda:0')
+tensor(0.8670, device='cuda:0')
+Iter 60 :Current Acc 0.7958 :Max Acc 0.7958 , Current nmi 0.7721 :Max nmi 0.7721 , Current kappa 0.7150 :Max kappa 0.7150
+total_loss tensor(0.0982, device='cuda:0') reconstr_loss tensor(0.0723, device='cuda:0') kl_loss tensor(0.0056, device='cuda:0')
+tensor(0.8972, device='cuda:0')
+Iter 70 :Current Acc 0.7956 :Max Acc 0.7956 , Current nmi 0.7737 :Max nmi 0.7737 , Current kappa 0.7147 :Max kappa 0.7147
+total_loss tensor(0.0802, device='cuda:0') reconstr_loss tensor(0.0567, device='cuda:0') kl_loss tensor(0.0052, device='cuda:0')
+tensor(0.9119, device='cuda:0')
+Iter 80 :Current Acc 0.7955 :Max Acc 0.7955 , Current nmi 0.7743 :Max nmi 0.7743 , Current kappa 0.7146 :Max kappa 0.7146
+total_loss tensor(0.0700, device='cuda:0') reconstr_loss tensor(0.0483, device='cuda:0') kl_loss tensor(0.0048, device='cuda:0')
+tensor(0.9209, device='cuda:0')
+Iter 90 :Current Acc 0.7950 :Max Acc 0.7950 , Current nmi 0.7744 :Max nmi 0.7744 , Current kappa 0.7139 :Max kappa 0.7139
+total_loss tensor(0.0706, device='cuda:0') reconstr_loss tensor(0.0502, device='cuda:0') kl_loss tensor(0.0046, device='cuda:0')
+tensor(0.9293, device='cuda:0')
+Iter 100 :Current Acc 0.7940 :Max Acc 0.7943 , Current nmi 0.7726 :Max nmi 0.7733 , Current kappa 0.7125 :Max kappa 0.7129
+total_loss tensor(0.0608, device='cuda:0') reconstr_loss tensor(0.0405, device='cuda:0') kl_loss tensor(0.0047, device='cuda:0')
+tensor(0.9318, device='cuda:0')
+Iter 110 :Current Acc 0.8051 :Max Acc 0.7943 , Current nmi 0.7855 :Max nmi 0.7733 , Current kappa 0.7301 :Max kappa 0.7129
+total_loss tensor(0.0588, device='cuda:0') reconstr_loss tensor(0.0365, device='cuda:0') kl_loss tensor(0.0053, device='cuda:0')
+tensor(0.9150, device='cuda:0')
+Iter 120 :Current Acc 0.8056 :Max Acc 0.8057 , Current nmi 0.7874 :Max nmi 0.7871 , Current kappa 0.7308 :Max kappa 0.7309
+total_loss tensor(0.0589, device='cuda:0') reconstr_loss tensor(0.0383, device='cuda:0') kl_loss tensor(0.0048, device='cuda:0')
+tensor(0.9351, device='cuda:0')
+Iter 130 :Current Acc 0.8054 :Max Acc 0.8054 , Current nmi 0.7881 :Max nmi 0.7881 , Current kappa 0.7306 :Max kappa 0.7306
+total_loss tensor(0.0506, device='cuda:0') reconstr_loss tensor(0.0306, device='cuda:0') kl_loss tensor(0.0046, device='cuda:0')
+tensor(0.9376, device='cuda:0')
+Iter 140 :Current Acc 0.8053 :Max Acc 0.8053 , Current nmi 0.7882 :Max nmi 0.7882 , Current kappa 0.7304 :Max kappa 0.7304
+total_loss tensor(0.0458, device='cuda:0') reconstr_loss tensor(0.0269, device='cuda:0') kl_loss tensor(0.0044, device='cuda:0')
+tensor(0.9432, device='cuda:0')
+Iter 150 :Current Acc 0.8053 :Max Acc 0.8052 , Current nmi 0.7887 :Max nmi 0.7884 , Current kappa 0.7304 :Max kappa 0.7302
+total_loss tensor(0.0509, device='cuda:0') reconstr_loss tensor(0.0329, device='cuda:0') kl_loss tensor(0.0042, device='cuda:0')
+tensor(0.9468, device='cuda:0')
+Iter 160 :Current Acc 0.8050 :Max Acc 0.8050 , Current nmi 0.7890 :Max nmi 0.7890 , Current kappa 0.7300 :Max kappa 0.7300
+total_loss tensor(0.0419, device='cuda:0') reconstr_loss tensor(0.0243, device='cuda:0') kl_loss tensor(0.0042, device='cuda:0')
+tensor(0.9512, device='cuda:0')
+Iter 170 :Current Acc 0.8051 :Max Acc 0.8051 , Current nmi 0.7891 :Max nmi 0.7892 , Current kappa 0.7302 :Max kappa 0.7302
+total_loss tensor(0.0383, device='cuda:0') reconstr_loss tensor(0.0212, device='cuda:0') kl_loss tensor(0.0040, device='cuda:0')
+tensor(0.9526, device='cuda:0')
+Iter 180 :Current Acc 0.8051 :Max Acc 0.8051 , Current nmi 0.7891 :Max nmi 0.7894 , Current kappa 0.7301 :Max kappa 0.7301
+total_loss tensor(0.0395, device='cuda:0') reconstr_loss tensor(0.0230, device='cuda:0') kl_loss tensor(0.0039, device='cuda:0')
+tensor(0.9547, device='cuda:0')
+Iter 190 :Current Acc 0.8051 :Max Acc 0.8052 , Current nmi 0.7890 :Max nmi 0.7892 , Current kappa 0.7302 :Max kappa 0.7303
+total_loss tensor(0.0352, device='cuda:0') reconstr_loss tensor(0.0190, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9559, device='cuda:0')
+Iter 200 :Current Acc 0.8050 :Max Acc 0.8050 , Current nmi 0.7891 :Max nmi 0.7891 , Current kappa 0.7300 :Max kappa 0.7300
+total_loss tensor(0.0332, device='cuda:0') reconstr_loss tensor(0.0177, device='cuda:0') kl_loss tensor(0.0037, device='cuda:0')
+tensor(0.9589, device='cuda:0')
+Iter 210 :Current Acc 0.8050 :Max Acc 0.8050 , Current nmi 0.7888 :Max nmi 0.7888 , Current kappa 0.7300 :Max kappa 0.7300
+total_loss tensor(0.0353, device='cuda:0') reconstr_loss tensor(0.0201, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9607, device='cuda:0')
+Iter 220 :Current Acc 0.8046 :Max Acc 0.8047 , Current nmi 0.7888 :Max nmi 0.7888 , Current kappa 0.7296 :Max kappa 0.7296
+total_loss tensor(0.0320, device='cuda:0') reconstr_loss tensor(0.0170, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9617, device='cuda:0')
+Iter 230 :Current Acc 0.8043 :Max Acc 0.8043 , Current nmi 0.7884 :Max nmi 0.7884 , Current kappa 0.7292 :Max kappa 0.7292
+total_loss tensor(0.0295, device='cuda:0') reconstr_loss tensor(0.0150, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9631, device='cuda:0')
+Iter 240 :Current Acc 0.8045 :Max Acc 0.8045 , Current nmi 0.7885 :Max nmi 0.7886 , Current kappa 0.7294 :Max kappa 0.7294
+total_loss tensor(0.0339, device='cuda:0') reconstr_loss tensor(0.0198, device='cuda:0') kl_loss tensor(0.0034, device='cuda:0')
+tensor(0.9645, device='cuda:0')
+Iter 250 :Current Acc 0.8042 :Max Acc 0.8045 , Current nmi 0.7881 :Max nmi 0.7884 , Current kappa 0.7290 :Max kappa 0.7294
+total_loss tensor(0.0313, device='cuda:0') reconstr_loss tensor(0.0171, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9659, device='cuda:0')
+Iter 260 :Current Acc 0.8044 :Max Acc 0.8044 , Current nmi 0.7885 :Max nmi 0.7885 , Current kappa 0.7292 :Max kappa 0.7292
+total_loss tensor(0.0280, device='cuda:0') reconstr_loss tensor(0.0141, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9674, device='cuda:0')
+Iter 270 :Current Acc 0.8045 :Max Acc 0.8040 , Current nmi 0.7886 :Max nmi 0.7881 , Current kappa 0.7294 :Max kappa 0.7287
+total_loss tensor(0.0261, device='cuda:0') reconstr_loss tensor(0.0126, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9681, device='cuda:0')
+Iter 280 :Current Acc 0.8040 :Max Acc 0.8040 , Current nmi 0.7882 :Max nmi 0.7882 , Current kappa 0.7288 :Max kappa 0.7288
+total_loss tensor(0.0276, device='cuda:0') reconstr_loss tensor(0.0144, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9699, device='cuda:0')
+Iter 290 :Current Acc 0.8039 :Max Acc 0.8039 , Current nmi 0.7881 :Max nmi 0.7881 , Current kappa 0.7286 :Max kappa 0.7286
+total_loss tensor(0.0241, device='cuda:0') reconstr_loss tensor(0.0113, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9708, device='cuda:0')
+Iter 300 :Current Acc 0.8044 :Max Acc 0.8044 , Current nmi 0.7889 :Max nmi 0.7889 , Current kappa 0.7292 :Max kappa 0.7292
+total_loss tensor(0.0271, device='cuda:0') reconstr_loss tensor(0.0145, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9713, device='cuda:0')
+Iter 310 :Current Acc 0.8039 :Max Acc 0.8039 , Current nmi 0.7886 :Max nmi 0.7886 , Current kappa 0.7287 :Max kappa 0.7287
+total_loss tensor(0.0263, device='cuda:0') reconstr_loss tensor(0.0138, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9725, device='cuda:0')
+Iter 320 :Current Acc 0.8031 :Max Acc 0.8040 , Current nmi 0.7882 :Max nmi 0.7888 , Current kappa 0.7276 :Max kappa 0.7288
+total_loss tensor(0.0233, device='cuda:0') reconstr_loss tensor(0.0107, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9712, device='cuda:0')
+Iter 330 :Current Acc 0.8034 :Max Acc 0.8036 , Current nmi 0.7884 :Max nmi 0.7886 , Current kappa 0.7279 :Max kappa 0.7282
+total_loss tensor(0.0220, device='cuda:0') reconstr_loss tensor(0.0099, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9734, device='cuda:0')
+Iter 340 :Current Acc 0.8031 :Max Acc 0.8036 , Current nmi 0.7883 :Max nmi 0.7886 , Current kappa 0.7275 :Max kappa 0.7283
+total_loss tensor(0.0303, device='cuda:0') reconstr_loss tensor(0.0182, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9734, device='cuda:0')
+Iter 350 :Current Acc 0.8037 :Max Acc 0.8037 , Current nmi 0.7892 :Max nmi 0.7892 , Current kappa 0.7284 :Max kappa 0.7284
+total_loss tensor(0.0240, device='cuda:0') reconstr_loss tensor(0.0119, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9749, device='cuda:0')
+Iter 360 :Current Acc 0.8035 :Max Acc 0.8037 , Current nmi 0.7890 :Max nmi 0.7892 , Current kappa 0.7281 :Max kappa 0.7284
+total_loss tensor(0.0213, device='cuda:0') reconstr_loss tensor(0.0094, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9747, device='cuda:0')
+Iter 370 :Current Acc 0.8032 :Max Acc 0.8036 , Current nmi 0.7887 :Max nmi 0.7889 , Current kappa 0.7277 :Max kappa 0.7283
+total_loss tensor(0.0200, device='cuda:0') reconstr_loss tensor(0.0084, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9758, device='cuda:0')
+Iter 380 :Current Acc 0.8035 :Max Acc 0.8033 , Current nmi 0.7888 :Max nmi 0.7886 , Current kappa 0.7281 :Max kappa 0.7278
+total_loss tensor(0.0195, device='cuda:0') reconstr_loss tensor(0.0083, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9760, device='cuda:0')
+Iter 390 :Current Acc 0.8044 :Max Acc 0.8033 , Current nmi 0.7895 :Max nmi 0.7886 , Current kappa 0.7293 :Max kappa 0.7278
+total_loss tensor(0.0302, device='cuda:0') reconstr_loss tensor(0.0170, device='cuda:0') kl_loss tensor(0.0034, device='cuda:0')
+tensor(0.9663, device='cuda:0')
+Iter 399 :Current Acc 0.8032 :Max Acc 0.8033 , Current nmi 0.7880 :Max nmi 0.7886 , Current kappa 0.7277 :Max kappa 0.7278
+total_loss tensor(0.0240, device='cuda:0') reconstr_loss tensor(0.0119, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9755, device='cuda:0')
+Running time:  238.54621744155884
+this is 6round
+torch.Size([1568, 6])
+Partition 0: 8510 clusters
+Partition 1: 2018 clusters
+Partition 2: 403 clusters
+Partition 3: 69 clusters
+Partition 4: 11 clusters
+Partition 5: 4 clusters
+Ae(
+  (encoder): Sequential(
+    (cov01): Conv2d(8, 32, kernel_size=(1, 1), stride=(1, 1), padding=same)
+    (bn01): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu01): ReLU(inplace=True)
+    (cov02): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn02): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu02): ReLU(inplace=True)
+    (cov03): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn03): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu03): ReLU(inplace=True)
+  )
+  (decoder): Sequential(
+    (tr01): ConvTranspose2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (rbn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (rre01): ReLU(inplace=True)
+    (tr02): ConvTranspose2d(32, 8, kernel_size=(1, 1), stride=(1, 1))
+  )
+)
+Epoch 0 loss=1.1349
+Epoch 1 loss=0.7005
+Epoch 2 loss=0.5490
+Epoch 3 loss=0.4513
+Epoch 4 loss=0.3808
+Epoch 5 loss=0.3283
+Epoch 6 loss=0.2884
+Epoch 7 loss=0.2560
+Epoch 8 loss=0.2298
+Epoch 9 loss=0.2076
+Model saved to weight/trento.pkl.
+Load pre-trained model from 
+Initial Cluster Centers:  [2 2 2 ... 2 2 5]
+Initialize D
+Shape of D:  (30, 1568)
+Initialization of D Finished
+Iter 0 :Current Acc 0.7279 :Max Acc 0.0000 , Current nmi 0.7590 :Max nmi 0.0000 , Current kappa 0.6279 :Max kappa 0.0000
+total_loss tensor(0.2236, device='cuda:0') reconstr_loss tensor(0.1963, device='cuda:0') kl_loss tensor(0.0072, device='cuda:0')
+tensor(0., device='cuda:0')
+Iter 10 :Current Acc 0.7484 :Max Acc 0.7484 , Current nmi 0.7711 :Max nmi 0.7711 , Current kappa 0.6481 :Max kappa 0.6481
+total_loss tensor(0.2389, device='cuda:0') reconstr_loss tensor(0.1846, device='cuda:0') kl_loss tensor(0.0109, device='cuda:0')
+tensor(0.2137, device='cuda:0')
+Iter 20 :Current Acc 0.6979 :Max Acc 0.6979 , Current nmi 0.7461 :Max nmi 0.7461 , Current kappa 0.5862 :Max kappa 0.5862
+total_loss tensor(0.1828, device='cuda:0') reconstr_loss tensor(0.1321, device='cuda:0') kl_loss tensor(0.0068, device='cuda:0')
+tensor(0.2852, device='cuda:0')
+Iter 30 :Current Acc 0.6689 :Max Acc 0.6689 , Current nmi 0.7052 :Max nmi 0.7052 , Current kappa 0.5576 :Max kappa 0.5576
+total_loss tensor(0.1468, device='cuda:0') reconstr_loss tensor(0.1041, device='cuda:0') kl_loss tensor(0.0075, device='cuda:0')
+tensor(0.3077, device='cuda:0')
+Iter 40 :Current Acc 0.6919 :Max Acc 0.6919 , Current nmi 0.7573 :Max nmi 0.7573 , Current kappa 0.5818 :Max kappa 0.5818
+total_loss tensor(0.1336, device='cuda:0') reconstr_loss tensor(0.0881, device='cuda:0') kl_loss tensor(0.0093, device='cuda:0')
+tensor(0.4646, device='cuda:0')
+Iter 50 :Current Acc 0.6923 :Max Acc 0.6854 , Current nmi 0.7503 :Max nmi 0.7569 , Current kappa 0.6115 :Max kappa 0.5739
+total_loss tensor(0.1244, device='cuda:0') reconstr_loss tensor(0.0778, device='cuda:0') kl_loss tensor(0.0102, device='cuda:0')
+tensor(0.5799, device='cuda:0')
+Iter 60 :Current Acc 0.7548 :Max Acc 0.7548 , Current nmi 0.7639 :Max nmi 0.7639 , Current kappa 0.6855 :Max kappa 0.6855
+total_loss tensor(0.1062, device='cuda:0') reconstr_loss tensor(0.0677, device='cuda:0') kl_loss tensor(0.0089, device='cuda:0')
+tensor(0.6506, device='cuda:0')
+Iter 70 :Current Acc 0.7692 :Max Acc 0.7692 , Current nmi 0.7653 :Max nmi 0.7653 , Current kappa 0.7032 :Max kappa 0.7032
+total_loss tensor(0.0928, device='cuda:0') reconstr_loss tensor(0.0585, device='cuda:0') kl_loss tensor(0.0079, device='cuda:0')
+tensor(0.6984, device='cuda:0')
+Iter 80 :Current Acc 0.7685 :Max Acc 0.7685 , Current nmi 0.7634 :Max nmi 0.7634 , Current kappa 0.7025 :Max kappa 0.7025
+total_loss tensor(0.0878, device='cuda:0') reconstr_loss tensor(0.0555, device='cuda:0') kl_loss tensor(0.0074, device='cuda:0')
+tensor(0.7312, device='cuda:0')
+Iter 90 :Current Acc 0.7754 :Max Acc 0.7754 , Current nmi 0.7654 :Max nmi 0.7654 , Current kappa 0.7109 :Max kappa 0.7109
+total_loss tensor(0.0766, device='cuda:0') reconstr_loss tensor(0.0457, device='cuda:0') kl_loss tensor(0.0072, device='cuda:0')
+tensor(0.7472, device='cuda:0')
+Iter 100 :Current Acc 0.7796 :Max Acc 0.7796 , Current nmi 0.7665 :Max nmi 0.7665 , Current kappa 0.7158 :Max kappa 0.7158
+total_loss tensor(0.0696, device='cuda:0') reconstr_loss tensor(0.0401, device='cuda:0') kl_loss tensor(0.0069, device='cuda:0')
+tensor(0.7651, device='cuda:0')
+Iter 110 :Current Acc 0.7849 :Max Acc 0.7849 , Current nmi 0.7684 :Max nmi 0.7684 , Current kappa 0.7223 :Max kappa 0.7223
+total_loss tensor(0.0671, device='cuda:0') reconstr_loss tensor(0.0386, device='cuda:0') kl_loss tensor(0.0067, device='cuda:0')
+tensor(0.7782, device='cuda:0')
+Iter 120 :Current Acc 0.7911 :Max Acc 0.7911 , Current nmi 0.7709 :Max nmi 0.7709 , Current kappa 0.7298 :Max kappa 0.7298
+total_loss tensor(0.0620, device='cuda:0') reconstr_loss tensor(0.0339, device='cuda:0') kl_loss tensor(0.0066, device='cuda:0')
+tensor(0.7879, device='cuda:0')
+Iter 130 :Current Acc 0.7956 :Max Acc 0.7956 , Current nmi 0.7732 :Max nmi 0.7732 , Current kappa 0.7353 :Max kappa 0.7353
+total_loss tensor(0.0564, device='cuda:0') reconstr_loss tensor(0.0293, device='cuda:0') kl_loss tensor(0.0064, device='cuda:0')
+tensor(0.7975, device='cuda:0')
+Iter 140 :Current Acc 0.8014 :Max Acc 0.8014 , Current nmi 0.7763 :Max nmi 0.7763 , Current kappa 0.7425 :Max kappa 0.7425
+total_loss tensor(0.0537, device='cuda:0') reconstr_loss tensor(0.0276, device='cuda:0') kl_loss tensor(0.0061, device='cuda:0')
+tensor(0.8094, device='cuda:0')
+Iter 150 :Current Acc 0.8095 :Max Acc 0.8071 , Current nmi 0.7811 :Max nmi 0.7796 , Current kappa 0.7523 :Max kappa 0.7494
+total_loss tensor(0.0520, device='cuda:0') reconstr_loss tensor(0.0264, device='cuda:0') kl_loss tensor(0.0060, device='cuda:0')
+tensor(0.8177, device='cuda:0')
+Iter 160 :Current Acc 0.8130 :Max Acc 0.8130 , Current nmi 0.7837 :Max nmi 0.7837 , Current kappa 0.7567 :Max kappa 0.7567
+total_loss tensor(0.0479, device='cuda:0') reconstr_loss tensor(0.0233, device='cuda:0') kl_loss tensor(0.0058, device='cuda:0')
+tensor(0.8267, device='cuda:0')
+Iter 170 :Current Acc 0.8202 :Max Acc 0.8165 , Current nmi 0.7880 :Max nmi 0.7859 , Current kappa 0.7657 :Max kappa 0.7611
+total_loss tensor(0.0475, device='cuda:0') reconstr_loss tensor(0.0235, device='cuda:0') kl_loss tensor(0.0057, device='cuda:0')
+tensor(0.8375, device='cuda:0')
+Iter 180 :Current Acc 0.8162 :Max Acc 0.8162 , Current nmi 0.7861 :Max nmi 0.7861 , Current kappa 0.7607 :Max kappa 0.7607
+total_loss tensor(0.0442, device='cuda:0') reconstr_loss tensor(0.0208, device='cuda:0') kl_loss tensor(0.0055, device='cuda:0')
+tensor(0.8503, device='cuda:0')
+Iter 190 :Current Acc 0.8254 :Max Acc 0.8187 , Current nmi 0.7923 :Max nmi 0.7877 , Current kappa 0.7721 :Max kappa 0.7638
+total_loss tensor(0.0419, device='cuda:0') reconstr_loss tensor(0.0193, device='cuda:0') kl_loss tensor(0.0054, device='cuda:0')
+tensor(0.8591, device='cuda:0')
+Iter 200 :Current Acc 0.8182 :Max Acc 0.8182 , Current nmi 0.7874 :Max nmi 0.7874 , Current kappa 0.7632 :Max kappa 0.7632
+total_loss tensor(0.0402, device='cuda:0') reconstr_loss tensor(0.0182, device='cuda:0') kl_loss tensor(0.0052, device='cuda:0')
+tensor(0.8758, device='cuda:0')
+Iter 210 :Current Acc 0.8258 :Max Acc 0.8258 , Current nmi 0.7924 :Max nmi 0.7924 , Current kappa 0.7726 :Max kappa 0.7726
+total_loss tensor(0.0401, device='cuda:0') reconstr_loss tensor(0.0187, device='cuda:0') kl_loss tensor(0.0051, device='cuda:0')
+tensor(0.8799, device='cuda:0')
+Iter 220 :Current Acc 0.8292 :Max Acc 0.8202 , Current nmi 0.7946 :Max nmi 0.7886 , Current kappa 0.7769 :Max kappa 0.7657
+total_loss tensor(0.0401, device='cuda:0') reconstr_loss tensor(0.0185, device='cuda:0') kl_loss tensor(0.0052, device='cuda:0')
+tensor(0.8732, device='cuda:0')
+Iter 230 :Current Acc 0.8228 :Max Acc 0.8228 , Current nmi 0.7902 :Max nmi 0.7902 , Current kappa 0.7689 :Max kappa 0.7689
+total_loss tensor(0.0361, device='cuda:0') reconstr_loss tensor(0.0157, device='cuda:0') kl_loss tensor(0.0048, device='cuda:0')
+tensor(0.8929, device='cuda:0')
+Iter 240 :Current Acc 0.8199 :Max Acc 0.8230 , Current nmi 0.7882 :Max nmi 0.7904 , Current kappa 0.7653 :Max kappa 0.7692
+total_loss tensor(0.0348, device='cuda:0') reconstr_loss tensor(0.0148, device='cuda:0') kl_loss tensor(0.0047, device='cuda:0')
+tensor(0.8988, device='cuda:0')
+Iter 250 :Current Acc 0.8210 :Max Acc 0.8210 , Current nmi 0.7890 :Max nmi 0.7890 , Current kappa 0.7668 :Max kappa 0.7668
+total_loss tensor(0.0360, device='cuda:0') reconstr_loss tensor(0.0165, device='cuda:0') kl_loss tensor(0.0047, device='cuda:0')
+tensor(0.9034, device='cuda:0')
+Iter 260 :Current Acc 0.8223 :Max Acc 0.8223 , Current nmi 0.7898 :Max nmi 0.7898 , Current kappa 0.7683 :Max kappa 0.7683
+total_loss tensor(0.0353, device='cuda:0') reconstr_loss tensor(0.0156, device='cuda:0') kl_loss tensor(0.0047, device='cuda:0')
+tensor(0.9063, device='cuda:0')
+Iter 270 :Current Acc 0.8256 :Max Acc 0.8195 , Current nmi 0.7925 :Max nmi 0.7882 , Current kappa 0.7725 :Max kappa 0.7649
+total_loss tensor(0.0328, device='cuda:0') reconstr_loss tensor(0.0137, device='cuda:0') kl_loss tensor(0.0045, device='cuda:0')
+tensor(0.8995, device='cuda:0')
+Iter 280 :Current Acc 0.8228 :Max Acc 0.8236 , Current nmi 0.7902 :Max nmi 0.7909 , Current kappa 0.7690 :Max kappa 0.7699
+total_loss tensor(0.0302, device='cuda:0') reconstr_loss tensor(0.0120, device='cuda:0') kl_loss tensor(0.0043, device='cuda:0')
+tensor(0.9149, device='cuda:0')
+Iter 290 :Current Acc 0.8232 :Max Acc 0.8233 , Current nmi 0.7904 :Max nmi 0.7905 , Current kappa 0.7694 :Max kappa 0.7696
+total_loss tensor(0.0286, device='cuda:0') reconstr_loss tensor(0.0110, device='cuda:0') kl_loss tensor(0.0042, device='cuda:0')
+tensor(0.9205, device='cuda:0')
+Iter 300 :Current Acc 0.8222 :Max Acc 0.8233 , Current nmi 0.7898 :Max nmi 0.7905 , Current kappa 0.7683 :Max kappa 0.7696
+total_loss tensor(0.0323, device='cuda:0') reconstr_loss tensor(0.0145, device='cuda:0') kl_loss tensor(0.0043, device='cuda:0')
+tensor(0.9083, device='cuda:0')
+Iter 310 :Current Acc 0.8250 :Max Acc 0.8229 , Current nmi 0.7921 :Max nmi 0.7903 , Current kappa 0.7717 :Max kappa 0.7691
+total_loss tensor(0.0397, device='cuda:0') reconstr_loss tensor(0.0167, device='cuda:0') kl_loss tensor(0.0058, device='cuda:0')
+tensor(0.8393, device='cuda:0')
+Iter 320 :Current Acc 0.8238 :Max Acc 0.8229 , Current nmi 0.7909 :Max nmi 0.7903 , Current kappa 0.7702 :Max kappa 0.7691
+total_loss tensor(0.0324, device='cuda:0') reconstr_loss tensor(0.0123, device='cuda:0') kl_loss tensor(0.0047, device='cuda:0')
+tensor(0.9009, device='cuda:0')
+Iter 330 :Current Acc 0.8228 :Max Acc 0.8229 , Current nmi 0.7901 :Max nmi 0.7903 , Current kappa 0.7690 :Max kappa 0.7691
+total_loss tensor(0.0291, device='cuda:0') reconstr_loss tensor(0.0106, device='cuda:0') kl_loss tensor(0.0043, device='cuda:0')
+tensor(0.9142, device='cuda:0')
+Iter 340 :Current Acc 0.8221 :Max Acc 0.8229 , Current nmi 0.7898 :Max nmi 0.7903 , Current kappa 0.7681 :Max kappa 0.7691
+total_loss tensor(0.0268, device='cuda:0') reconstr_loss tensor(0.0095, device='cuda:0') kl_loss tensor(0.0041, device='cuda:0')
+tensor(0.9218, device='cuda:0')
+Iter 350 :Current Acc 0.8222 :Max Acc 0.8222 , Current nmi 0.7899 :Max nmi 0.7899 , Current kappa 0.7682 :Max kappa 0.7682
+total_loss tensor(0.0253, device='cuda:0') reconstr_loss tensor(0.0088, device='cuda:0') kl_loss tensor(0.0040, device='cuda:0')
+tensor(0.9271, device='cuda:0')
+Iter 360 :Current Acc 0.8223 :Max Acc 0.8223 , Current nmi 0.7900 :Max nmi 0.7900 , Current kappa 0.7683 :Max kappa 0.7683
+total_loss tensor(0.0245, device='cuda:0') reconstr_loss tensor(0.0087, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9327, device='cuda:0')
+Iter 370 :Current Acc 0.8241 :Max Acc 0.8225 , Current nmi 0.7911 :Max nmi 0.7903 , Current kappa 0.7705 :Max kappa 0.7686
+total_loss tensor(0.0248, device='cuda:0') reconstr_loss tensor(0.0092, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9332, device='cuda:0')
+Iter 380 :Current Acc 0.8223 :Max Acc 0.8223 , Current nmi 0.7903 :Max nmi 0.7903 , Current kappa 0.7683 :Max kappa 0.7683
+total_loss tensor(0.0241, device='cuda:0') reconstr_loss tensor(0.0087, device='cuda:0') kl_loss tensor(0.0037, device='cuda:0')
+tensor(0.9413, device='cuda:0')
+Iter 390 :Current Acc 0.8245 :Max Acc 0.8219 , Current nmi 0.7917 :Max nmi 0.7899 , Current kappa 0.7711 :Max kappa 0.7679
+total_loss tensor(0.0231, device='cuda:0') reconstr_loss tensor(0.0080, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9380, device='cuda:0')
+Iter 399 :Current Acc 0.8240 :Max Acc 0.8218 , Current nmi 0.7914 :Max nmi 0.7898 , Current kappa 0.7704 :Max kappa 0.7677
+total_loss tensor(0.0220, device='cuda:0') reconstr_loss tensor(0.0075, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9410, device='cuda:0')
+Running time:  247.90618348121643
+this is 7round
+torch.Size([1568, 6])
+Partition 0: 8510 clusters
+Partition 1: 2018 clusters
+Partition 2: 403 clusters
+Partition 3: 69 clusters
+Partition 4: 11 clusters
+Partition 5: 4 clusters
+Ae(
+  (encoder): Sequential(
+    (cov01): Conv2d(8, 32, kernel_size=(1, 1), stride=(1, 1), padding=same)
+    (bn01): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu01): ReLU(inplace=True)
+    (cov02): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn02): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu02): ReLU(inplace=True)
+    (cov03): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn03): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu03): ReLU(inplace=True)
+  )
+  (decoder): Sequential(
+    (tr01): ConvTranspose2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (rbn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (rre01): ReLU(inplace=True)
+    (tr02): ConvTranspose2d(32, 8, kernel_size=(1, 1), stride=(1, 1))
+  )
+)
+Epoch 0 loss=1.1230
+Epoch 1 loss=0.6683
+Epoch 2 loss=0.5235
+Epoch 3 loss=0.4360
+Epoch 4 loss=0.3723
+Epoch 5 loss=0.3247
+Epoch 6 loss=0.2880
+Epoch 7 loss=0.2585
+Epoch 8 loss=0.2341
+Epoch 9 loss=0.2134
+Model saved to weight/trento.pkl.
+Load pre-trained model from 
+Initial Cluster Centers:  [0 0 0 ... 3 0 2]
+Initialize D
+Shape of D:  (30, 1568)
+Initialization of D Finished
+Iter 0 :Current Acc 0.7507 :Max Acc 0.0000 , Current nmi 0.7209 :Max nmi 0.0000 , Current kappa 0.6552 :Max kappa 0.0000
+total_loss tensor(0.2342, device='cuda:0') reconstr_loss tensor(0.2029, device='cuda:0') kl_loss tensor(0.0086, device='cuda:0')
+tensor(0., device='cuda:0')
+Iter 10 :Current Acc 0.7727 :Max Acc 0.7727 , Current nmi 0.7695 :Max nmi 0.7695 , Current kappa 0.6845 :Max kappa 0.6845
+total_loss tensor(0.2447, device='cuda:0') reconstr_loss tensor(0.1907, device='cuda:0') kl_loss tensor(0.0112, device='cuda:0')
+tensor(0.2368, device='cuda:0')
+Iter 20 :Current Acc 0.8136 :Max Acc 0.8136 , Current nmi 0.7820 :Max nmi 0.7820 , Current kappa 0.7454 :Max kappa 0.7454
+total_loss tensor(0.1870, device='cuda:0') reconstr_loss tensor(0.1327, device='cuda:0') kl_loss tensor(0.0091, device='cuda:0')
+tensor(0.2825, device='cuda:0')
+Iter 30 :Current Acc 0.8763 :Max Acc 0.8763 , Current nmi 0.8367 :Max nmi 0.8367 , Current kappa 0.8344 :Max kappa 0.8344
+total_loss tensor(0.1629, device='cuda:0') reconstr_loss tensor(0.1064, device='cuda:0') kl_loss tensor(0.0112, device='cuda:0')
+tensor(0.4768, device='cuda:0')
+Iter 40 :Current Acc 0.9043 :Max Acc 0.9043 , Current nmi 0.8442 :Max nmi 0.8442 , Current kappa 0.8722 :Max kappa 0.8722
+total_loss tensor(0.1395, device='cuda:0') reconstr_loss tensor(0.0882, device='cuda:0') kl_loss tensor(0.0104, device='cuda:0')
+tensor(0.6282, device='cuda:0')
+Iter 50 :Current Acc 0.9196 :Max Acc 0.9196 , Current nmi 0.8595 :Max nmi 0.8595 , Current kappa 0.8925 :Max kappa 0.8925
+total_loss tensor(0.1199, device='cuda:0') reconstr_loss tensor(0.0763, device='cuda:0') kl_loss tensor(0.0090, device='cuda:0')
+tensor(0.7593, device='cuda:0')
+Iter 60 :Current Acc 0.9224 :Max Acc 0.9224 , Current nmi 0.8656 :Max nmi 0.8656 , Current kappa 0.8962 :Max kappa 0.8962
+total_loss tensor(0.0989, device='cuda:0') reconstr_loss tensor(0.0647, device='cuda:0') kl_loss tensor(0.0077, device='cuda:0')
+tensor(0.8150, device='cuda:0')
+Iter 70 :Current Acc 0.9263 :Max Acc 0.9263 , Current nmi 0.8750 :Max nmi 0.8750 , Current kappa 0.9014 :Max kappa 0.9014
+total_loss tensor(0.0889, device='cuda:0') reconstr_loss tensor(0.0591, device='cuda:0') kl_loss tensor(0.0069, device='cuda:0')
+tensor(0.8564, device='cuda:0')
+Iter 80 :Current Acc 0.9297 :Max Acc 0.9297 , Current nmi 0.8836 :Max nmi 0.8836 , Current kappa 0.9060 :Max kappa 0.9060
+total_loss tensor(0.0759, device='cuda:0') reconstr_loss tensor(0.0482, device='cuda:0') kl_loss tensor(0.0064, device='cuda:0')
+tensor(0.8769, device='cuda:0')
+Iter 90 :Current Acc 0.9313 :Max Acc 0.9313 , Current nmi 0.8877 :Max nmi 0.8877 , Current kappa 0.9080 :Max kappa 0.9080
+total_loss tensor(0.0679, device='cuda:0') reconstr_loss tensor(0.0420, device='cuda:0') kl_loss tensor(0.0059, device='cuda:0')
+tensor(0.8947, device='cuda:0')
+Iter 100 :Current Acc 0.9325 :Max Acc 0.9325 , Current nmi 0.8910 :Max nmi 0.8910 , Current kappa 0.9097 :Max kappa 0.9097
+total_loss tensor(0.0618, device='cuda:0') reconstr_loss tensor(0.0374, device='cuda:0') kl_loss tensor(0.0056, device='cuda:0')
+tensor(0.9051, device='cuda:0')
+Iter 110 :Current Acc 0.9330 :Max Acc 0.9330 , Current nmi 0.8926 :Max nmi 0.8926 , Current kappa 0.9103 :Max kappa 0.9103
+total_loss tensor(0.0580, device='cuda:0') reconstr_loss tensor(0.0346, device='cuda:0') kl_loss tensor(0.0054, device='cuda:0')
+tensor(0.9145, device='cuda:0')
+Iter 120 :Current Acc 0.9332 :Max Acc 0.9331 , Current nmi 0.8934 :Max nmi 0.8933 , Current kappa 0.9107 :Max kappa 0.9105
+total_loss tensor(0.0520, device='cuda:0') reconstr_loss tensor(0.0297, device='cuda:0') kl_loss tensor(0.0052, device='cuda:0')
+tensor(0.9215, device='cuda:0')
+Iter 130 :Current Acc 0.9332 :Max Acc 0.9332 , Current nmi 0.8936 :Max nmi 0.8936 , Current kappa 0.9107 :Max kappa 0.9107
+total_loss tensor(0.0479, device='cuda:0') reconstr_loss tensor(0.0267, device='cuda:0') kl_loss tensor(0.0049, device='cuda:0')
+tensor(0.9294, device='cuda:0')
+Iter 140 :Current Acc 0.9333 :Max Acc 0.9333 , Current nmi 0.8944 :Max nmi 0.8944 , Current kappa 0.9107 :Max kappa 0.9107
+total_loss tensor(0.0456, device='cuda:0') reconstr_loss tensor(0.0251, device='cuda:0') kl_loss tensor(0.0048, device='cuda:0')
+tensor(0.9345, device='cuda:0')
+Iter 150 :Current Acc 0.9335 :Max Acc 0.9335 , Current nmi 0.8949 :Max nmi 0.8949 , Current kappa 0.9110 :Max kappa 0.9110
+total_loss tensor(0.0422, device='cuda:0') reconstr_loss tensor(0.0224, device='cuda:0') kl_loss tensor(0.0047, device='cuda:0')
+tensor(0.9388, device='cuda:0')
+Iter 160 :Current Acc 0.9334 :Max Acc 0.9334 , Current nmi 0.8953 :Max nmi 0.8953 , Current kappa 0.9110 :Max kappa 0.9110
+total_loss tensor(0.0390, device='cuda:0') reconstr_loss tensor(0.0199, device='cuda:0') kl_loss tensor(0.0045, device='cuda:0')
+tensor(0.9433, device='cuda:0')
+Iter 170 :Current Acc 0.9337 :Max Acc 0.9337 , Current nmi 0.8963 :Max nmi 0.8961 , Current kappa 0.9113 :Max kappa 0.9113
+total_loss tensor(0.0399, device='cuda:0') reconstr_loss tensor(0.0216, device='cuda:0') kl_loss tensor(0.0043, device='cuda:0')
+tensor(0.9462, device='cuda:0')
+Iter 180 :Current Acc 0.9339 :Max Acc 0.9339 , Current nmi 0.8969 :Max nmi 0.8969 , Current kappa 0.9115 :Max kappa 0.9115
+total_loss tensor(0.0352, device='cuda:0') reconstr_loss tensor(0.0174, device='cuda:0') kl_loss tensor(0.0042, device='cuda:0')
+tensor(0.9503, device='cuda:0')
+Iter 190 :Current Acc 0.9339 :Max Acc 0.9339 , Current nmi 0.8972 :Max nmi 0.8971 , Current kappa 0.9116 :Max kappa 0.9116
+total_loss tensor(0.0348, device='cuda:0') reconstr_loss tensor(0.0174, device='cuda:0') kl_loss tensor(0.0042, device='cuda:0')
+tensor(0.9496, device='cuda:0')
+Iter 200 :Current Acc 0.9340 :Max Acc 0.9340 , Current nmi 0.8976 :Max nmi 0.8975 , Current kappa 0.9117 :Max kappa 0.9117
+total_loss tensor(0.0329, device='cuda:0') reconstr_loss tensor(0.0160, device='cuda:0') kl_loss tensor(0.0040, device='cuda:0')
+tensor(0.9532, device='cuda:0')
+Iter 210 :Current Acc 0.9340 :Max Acc 0.9341 , Current nmi 0.8977 :Max nmi 0.8978 , Current kappa 0.9117 :Max kappa 0.9118
+total_loss tensor(0.0309, device='cuda:0') reconstr_loss tensor(0.0146, device='cuda:0') kl_loss tensor(0.0039, device='cuda:0')
+tensor(0.9563, device='cuda:0')
+Iter 220 :Current Acc 0.9343 :Max Acc 0.9342 , Current nmi 0.8991 :Max nmi 0.8986 , Current kappa 0.9121 :Max kappa 0.9120
+total_loss tensor(0.0322, device='cuda:0') reconstr_loss tensor(0.0163, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9577, device='cuda:0')
+Iter 230 :Current Acc 0.9345 :Max Acc 0.9345 , Current nmi 0.8997 :Max nmi 0.8997 , Current kappa 0.9124 :Max kappa 0.9124
+total_loss tensor(0.0297, device='cuda:0') reconstr_loss tensor(0.0139, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9598, device='cuda:0')
+Iter 240 :Current Acc 0.9344 :Max Acc 0.9344 , Current nmi 0.8992 :Max nmi 0.8994 , Current kappa 0.9123 :Max kappa 0.9122
+total_loss tensor(0.0272, device='cuda:0') reconstr_loss tensor(0.0120, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9608, device='cuda:0')
+Iter 250 :Current Acc 0.9354 :Max Acc 0.9351 , Current nmi 0.9018 :Max nmi 0.9010 , Current kappa 0.9136 :Max kappa 0.9132
+total_loss tensor(0.0258, device='cuda:0') reconstr_loss tensor(0.0111, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9626, device='cuda:0')
+Iter 260 :Current Acc 0.9350 :Max Acc 0.9375 , Current nmi 0.9010 :Max nmi 0.9082 , Current kappa 0.9131 :Max kappa 0.9164
+total_loss tensor(0.0369, device='cuda:0') reconstr_loss tensor(0.0220, device='cuda:0') kl_loss tensor(0.0037, device='cuda:0')
+tensor(0.9564, device='cuda:0')
+Iter 270 :Current Acc 0.9379 :Max Acc 0.9377 , Current nmi 0.9095 :Max nmi 0.9090 , Current kappa 0.9170 :Max kappa 0.9167
+total_loss tensor(0.0274, device='cuda:0') reconstr_loss tensor(0.0129, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9648, device='cuda:0')
+Iter 280 :Current Acc 0.9378 :Max Acc 0.9378 , Current nmi 0.9093 :Max nmi 0.9092 , Current kappa 0.9168 :Max kappa 0.9169
+total_loss tensor(0.0249, device='cuda:0') reconstr_loss tensor(0.0108, device='cuda:0') kl_loss tensor(0.0034, device='cuda:0')
+tensor(0.9658, device='cuda:0')
+Iter 290 :Current Acc 0.9379 :Max Acc 0.9378 , Current nmi 0.9096 :Max nmi 0.9094 , Current kappa 0.9170 :Max kappa 0.9169
+total_loss tensor(0.0233, device='cuda:0') reconstr_loss tensor(0.0096, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9671, device='cuda:0')
+Iter 300 :Current Acc 0.9378 :Max Acc 0.9379 , Current nmi 0.9094 :Max nmi 0.9095 , Current kappa 0.9169 :Max kappa 0.9169
+total_loss tensor(0.0223, device='cuda:0') reconstr_loss tensor(0.0091, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9696, device='cuda:0')
+Iter 310 :Current Acc 0.9380 :Max Acc 0.9380 , Current nmi 0.9097 :Max nmi 0.9097 , Current kappa 0.9171 :Max kappa 0.9171
+total_loss tensor(0.0242, device='cuda:0') reconstr_loss tensor(0.0111, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9705, device='cuda:0')
+Iter 320 :Current Acc 0.9380 :Max Acc 0.9379 , Current nmi 0.9096 :Max nmi 0.9096 , Current kappa 0.9171 :Max kappa 0.9170
+total_loss tensor(0.0236, device='cuda:0') reconstr_loss tensor(0.0101, device='cuda:0') kl_loss tensor(0.0034, device='cuda:0')
+tensor(0.9680, device='cuda:0')
+Iter 330 :Current Acc 0.9378 :Max Acc 0.9377 , Current nmi 0.9095 :Max nmi 0.9093 , Current kappa 0.9168 :Max kappa 0.9167
+total_loss tensor(0.0212, device='cuda:0') reconstr_loss tensor(0.0086, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9725, device='cuda:0')
+Iter 340 :Current Acc 0.9377 :Max Acc 0.9376 , Current nmi 0.9093 :Max nmi 0.9094 , Current kappa 0.9167 :Max kappa 0.9166
+total_loss tensor(0.0202, device='cuda:0') reconstr_loss tensor(0.0079, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9729, device='cuda:0')
+Iter 350 :Current Acc 0.9378 :Max Acc 0.9377 , Current nmi 0.9095 :Max nmi 0.9094 , Current kappa 0.9168 :Max kappa 0.9167
+total_loss tensor(0.0196, device='cuda:0') reconstr_loss tensor(0.0075, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9733, device='cuda:0')
+Iter 360 :Current Acc 0.9376 :Max Acc 0.9377 , Current nmi 0.9093 :Max nmi 0.9094 , Current kappa 0.9166 :Max kappa 0.9167
+total_loss tensor(0.0190, device='cuda:0') reconstr_loss tensor(0.0073, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9745, device='cuda:0')
+Iter 370 :Current Acc 0.9378 :Max Acc 0.9378 , Current nmi 0.9096 :Max nmi 0.9096 , Current kappa 0.9168 :Max kappa 0.9168
+total_loss tensor(0.0221, device='cuda:0') reconstr_loss tensor(0.0104, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9750, device='cuda:0')
+Iter 380 :Current Acc 0.9377 :Max Acc 0.9377 , Current nmi 0.9094 :Max nmi 0.9094 , Current kappa 0.9167 :Max kappa 0.9167
+total_loss tensor(0.0195, device='cuda:0') reconstr_loss tensor(0.0080, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9764, device='cuda:0')
+Iter 390 :Current Acc 0.9377 :Max Acc 0.9377 , Current nmi 0.9095 :Max nmi 0.9094 , Current kappa 0.9167 :Max kappa 0.9167
+total_loss tensor(0.0186, device='cuda:0') reconstr_loss tensor(0.0071, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9759, device='cuda:0')
+Iter 399 :Current Acc 0.9375 :Max Acc 0.9375 , Current nmi 0.9094 :Max nmi 0.9094 , Current kappa 0.9164 :Max kappa 0.9164
+total_loss tensor(0.0183, device='cuda:0') reconstr_loss tensor(0.0072, device='cuda:0') kl_loss tensor(0.0028, device='cuda:0')
+tensor(0.9769, device='cuda:0')
+Running time:  242.7009015083313
+this is 8round
+torch.Size([1568, 6])
+Partition 0: 8510 clusters
+Partition 1: 2018 clusters
+Partition 2: 403 clusters
+Partition 3: 69 clusters
+Partition 4: 11 clusters
+Partition 5: 4 clusters
+Ae(
+  (encoder): Sequential(
+    (cov01): Conv2d(8, 32, kernel_size=(1, 1), stride=(1, 1), padding=same)
+    (bn01): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu01): ReLU(inplace=True)
+    (cov02): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn02): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu02): ReLU(inplace=True)
+    (cov03): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn03): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu03): ReLU(inplace=True)
+  )
+  (decoder): Sequential(
+    (tr01): ConvTranspose2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (rbn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (rre01): ReLU(inplace=True)
+    (tr02): ConvTranspose2d(32, 8, kernel_size=(1, 1), stride=(1, 1))
+  )
+)
+Epoch 0 loss=1.1467
+Epoch 1 loss=0.7102
+Epoch 2 loss=0.5772
+Epoch 3 loss=0.4907
+Epoch 4 loss=0.4269
+Epoch 5 loss=0.3742
+Epoch 6 loss=0.3303
+Epoch 7 loss=0.2919
+Epoch 8 loss=0.2600
+Epoch 9 loss=0.2323
+Model saved to weight/trento.pkl.
+Load pre-trained model from 
+Initial Cluster Centers:  [2 2 2 ... 5 2 0]
+Initialize D
+Shape of D:  (30, 1568)
+Initialization of D Finished
+Iter 0 :Current Acc 0.7563 :Max Acc 0.0000 , Current nmi 0.7251 :Max nmi 0.0000 , Current kappa 0.6650 :Max kappa 0.0000
+total_loss tensor(0.2503, device='cuda:0') reconstr_loss tensor(0.2186, device='cuda:0') kl_loss tensor(0.0084, device='cuda:0')
+tensor(0., device='cuda:0')
+Iter 10 :Current Acc 0.7334 :Max Acc 0.7334 , Current nmi 0.7165 :Max nmi 0.7165 , Current kappa 0.6267 :Max kappa 0.6267
+total_loss tensor(0.2525, device='cuda:0') reconstr_loss tensor(0.1986, device='cuda:0') kl_loss tensor(0.0113, device='cuda:0')
+tensor(0.1872, device='cuda:0')
+Iter 20 :Current Acc 0.7454 :Max Acc 0.7454 , Current nmi 0.7648 :Max nmi 0.7648 , Current kappa 0.6440 :Max kappa 0.6440
+total_loss tensor(0.1889, device='cuda:0') reconstr_loss tensor(0.1357, device='cuda:0') kl_loss tensor(0.0082, device='cuda:0')
+tensor(0.2964, device='cuda:0')
+Iter 30 :Current Acc 0.6998 :Max Acc 0.6998 , Current nmi 0.7320 :Max nmi 0.7320 , Current kappa 0.5865 :Max kappa 0.5865
+total_loss tensor(0.1569, device='cuda:0') reconstr_loss tensor(0.1049, device='cuda:0') kl_loss tensor(0.0101, device='cuda:0')
+tensor(0.3557, device='cuda:0')
+Iter 40 :Current Acc 0.8290 :Max Acc 0.8290 , Current nmi 0.7484 :Max nmi 0.7484 , Current kappa 0.7760 :Max kappa 0.7760
+total_loss tensor(0.1471, device='cuda:0') reconstr_loss tensor(0.0892, device='cuda:0') kl_loss tensor(0.0120, device='cuda:0')
+tensor(0.4612, device='cuda:0')
+Iter 50 :Current Acc 0.8358 :Max Acc 0.8358 , Current nmi 0.7640 :Max nmi 0.7640 , Current kappa 0.7860 :Max kappa 0.7860
+total_loss tensor(0.1253, device='cuda:0') reconstr_loss tensor(0.0774, device='cuda:0') kl_loss tensor(0.0098, device='cuda:0')
+tensor(0.6257, device='cuda:0')
+Iter 60 :Current Acc 0.8461 :Max Acc 0.8461 , Current nmi 0.7741 :Max nmi 0.7741 , Current kappa 0.7990 :Max kappa 0.7990
+total_loss tensor(0.1042, device='cuda:0') reconstr_loss tensor(0.0670, device='cuda:0') kl_loss tensor(0.0083, device='cuda:0')
+tensor(0.7094, device='cuda:0')
+Iter 70 :Current Acc 0.8733 :Max Acc 0.8733 , Current nmi 0.7966 :Max nmi 0.7966 , Current kappa 0.8333 :Max kappa 0.8333
+total_loss tensor(0.0902, device='cuda:0') reconstr_loss tensor(0.0578, device='cuda:0') kl_loss tensor(0.0075, device='cuda:0')
+tensor(0.7603, device='cuda:0')
+Iter 80 :Current Acc 0.9315 :Max Acc 0.9315 , Current nmi 0.8831 :Max nmi 0.8831 , Current kappa 0.9083 :Max kappa 0.9083
+total_loss tensor(0.0871, device='cuda:0') reconstr_loss tensor(0.0571, device='cuda:0') kl_loss tensor(0.0069, device='cuda:0')
+tensor(0.8563, device='cuda:0')
+Iter 90 :Current Acc 0.9343 :Max Acc 0.9343 , Current nmi 0.8932 :Max nmi 0.8932 , Current kappa 0.9122 :Max kappa 0.9122
+total_loss tensor(0.0753, device='cuda:0') reconstr_loss tensor(0.0474, device='cuda:0') kl_loss tensor(0.0065, device='cuda:0')
+tensor(0.8809, device='cuda:0')
+Iter 100 :Current Acc 0.9348 :Max Acc 0.9348 , Current nmi 0.8946 :Max nmi 0.8946 , Current kappa 0.9127 :Max kappa 0.9127
+total_loss tensor(0.0666, device='cuda:0') reconstr_loss tensor(0.0407, device='cuda:0') kl_loss tensor(0.0060, device='cuda:0')
+tensor(0.9008, device='cuda:0')
+Iter 110 :Current Acc 0.9350 :Max Acc 0.9350 , Current nmi 0.8955 :Max nmi 0.8955 , Current kappa 0.9130 :Max kappa 0.9130
+total_loss tensor(0.0641, device='cuda:0') reconstr_loss tensor(0.0395, device='cuda:0') kl_loss tensor(0.0057, device='cuda:0')
+tensor(0.9109, device='cuda:0')
+Iter 120 :Current Acc 0.9355 :Max Acc 0.9355 , Current nmi 0.8972 :Max nmi 0.8972 , Current kappa 0.9138 :Max kappa 0.9138
+total_loss tensor(0.0562, device='cuda:0') reconstr_loss tensor(0.0325, device='cuda:0') kl_loss tensor(0.0055, device='cuda:0')
+tensor(0.9154, device='cuda:0')
+Iter 130 :Current Acc 0.9358 :Max Acc 0.9358 , Current nmi 0.8979 :Max nmi 0.8979 , Current kappa 0.9141 :Max kappa 0.9141
+total_loss tensor(0.0528, device='cuda:0') reconstr_loss tensor(0.0302, device='cuda:0') kl_loss tensor(0.0053, device='cuda:0')
+tensor(0.9238, device='cuda:0')
+Iter 140 :Current Acc 0.9363 :Max Acc 0.9363 , Current nmi 0.8996 :Max nmi 0.8996 , Current kappa 0.9147 :Max kappa 0.9147
+total_loss tensor(0.0575, device='cuda:0') reconstr_loss tensor(0.0359, device='cuda:0') kl_loss tensor(0.0051, device='cuda:0')
+tensor(0.9301, device='cuda:0')
+Iter 150 :Current Acc 0.9365 :Max Acc 0.9365 , Current nmi 0.8996 :Max nmi 0.8996 , Current kappa 0.9151 :Max kappa 0.9151
+total_loss tensor(0.0473, device='cuda:0') reconstr_loss tensor(0.0261, device='cuda:0') kl_loss tensor(0.0050, device='cuda:0')
+tensor(0.9354, device='cuda:0')
+Iter 160 :Current Acc 0.9368 :Max Acc 0.9368 , Current nmi 0.9006 :Max nmi 0.9006 , Current kappa 0.9155 :Max kappa 0.9155
+total_loss tensor(0.0434, device='cuda:0') reconstr_loss tensor(0.0230, device='cuda:0') kl_loss tensor(0.0048, device='cuda:0')
+tensor(0.9388, device='cuda:0')
+Iter 170 :Current Acc 0.9366 :Max Acc 0.9366 , Current nmi 0.9002 :Max nmi 0.9002 , Current kappa 0.9151 :Max kappa 0.9151
+total_loss tensor(0.0420, device='cuda:0') reconstr_loss tensor(0.0225, device='cuda:0') kl_loss tensor(0.0046, device='cuda:0')
+tensor(0.9426, device='cuda:0')
+Iter 180 :Current Acc 0.9367 :Max Acc 0.9367 , Current nmi 0.9007 :Max nmi 0.9007 , Current kappa 0.9153 :Max kappa 0.9153
+total_loss tensor(0.0429, device='cuda:0') reconstr_loss tensor(0.0237, device='cuda:0') kl_loss tensor(0.0046, device='cuda:0')
+tensor(0.9450, device='cuda:0')
+Iter 190 :Current Acc 0.9366 :Max Acc 0.9366 , Current nmi 0.9004 :Max nmi 0.9004 , Current kappa 0.9152 :Max kappa 0.9152
+total_loss tensor(0.0387, device='cuda:0') reconstr_loss tensor(0.0200, device='cuda:0') kl_loss tensor(0.0045, device='cuda:0')
+tensor(0.9484, device='cuda:0')
+Iter 200 :Current Acc 0.9364 :Max Acc 0.9364 , Current nmi 0.9004 :Max nmi 0.9004 , Current kappa 0.9149 :Max kappa 0.9149
+total_loss tensor(0.0357, device='cuda:0') reconstr_loss tensor(0.0179, device='cuda:0') kl_loss tensor(0.0043, device='cuda:0')
+tensor(0.9503, device='cuda:0')
+Iter 210 :Current Acc 0.9363 :Max Acc 0.9363 , Current nmi 0.9003 :Max nmi 0.9003 , Current kappa 0.9147 :Max kappa 0.9148
+total_loss tensor(0.0341, device='cuda:0') reconstr_loss tensor(0.0169, device='cuda:0') kl_loss tensor(0.0041, device='cuda:0')
+tensor(0.9525, device='cuda:0')
+Iter 220 :Current Acc 0.9363 :Max Acc 0.9363 , Current nmi 0.9005 :Max nmi 0.9005 , Current kappa 0.9148 :Max kappa 0.9148
+total_loss tensor(0.0372, device='cuda:0') reconstr_loss tensor(0.0201, device='cuda:0') kl_loss tensor(0.0042, device='cuda:0')
+tensor(0.9548, device='cuda:0')
+Iter 230 :Current Acc 0.9364 :Max Acc 0.9364 , Current nmi 0.9006 :Max nmi 0.9006 , Current kappa 0.9149 :Max kappa 0.9149
+total_loss tensor(0.0328, device='cuda:0') reconstr_loss tensor(0.0160, device='cuda:0') kl_loss tensor(0.0041, device='cuda:0')
+tensor(0.9557, device='cuda:0')
+Iter 240 :Current Acc 0.9365 :Max Acc 0.9362 , Current nmi 0.9010 :Max nmi 0.9006 , Current kappa 0.9150 :Max kappa 0.9147
+total_loss tensor(0.0305, device='cuda:0') reconstr_loss tensor(0.0144, device='cuda:0') kl_loss tensor(0.0039, device='cuda:0')
+tensor(0.9578, device='cuda:0')
+Iter 250 :Current Acc 0.9363 :Max Acc 0.9363 , Current nmi 0.9008 :Max nmi 0.9008 , Current kappa 0.9148 :Max kappa 0.9148
+total_loss tensor(0.0289, device='cuda:0') reconstr_loss tensor(0.0133, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9604, device='cuda:0')
+Iter 260 :Current Acc 0.9366 :Max Acc 0.9366 , Current nmi 0.9015 :Max nmi 0.9013 , Current kappa 0.9152 :Max kappa 0.9152
+total_loss tensor(0.0304, device='cuda:0') reconstr_loss tensor(0.0153, device='cuda:0') kl_loss tensor(0.0037, device='cuda:0')
+tensor(0.9619, device='cuda:0')
+Iter 270 :Current Acc 0.9368 :Max Acc 0.9367 , Current nmi 0.9018 :Max nmi 0.9017 , Current kappa 0.9155 :Max kappa 0.9153
+total_loss tensor(0.0307, device='cuda:0') reconstr_loss tensor(0.0155, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9629, device='cuda:0')
+Iter 280 :Current Acc 0.9383 :Max Acc 0.9376 , Current nmi 0.9049 :Max nmi 0.9031 , Current kappa 0.9175 :Max kappa 0.9165
+total_loss tensor(0.0272, device='cuda:0') reconstr_loss tensor(0.0124, device='cuda:0') kl_loss tensor(0.0037, device='cuda:0')
+tensor(0.9642, device='cuda:0')
+Iter 290 :Current Acc 0.9403 :Max Acc 0.9403 , Current nmi 0.9111 :Max nmi 0.9111 , Current kappa 0.9201 :Max kappa 0.9201
+total_loss tensor(0.0255, device='cuda:0') reconstr_loss tensor(0.0113, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9695, device='cuda:0')
+Iter 300 :Current Acc 0.9403 :Max Acc 0.9404 , Current nmi 0.9112 :Max nmi 0.9112 , Current kappa 0.9202 :Max kappa 0.9202
+total_loss tensor(0.0250, device='cuda:0') reconstr_loss tensor(0.0114, device='cuda:0') kl_loss tensor(0.0034, device='cuda:0')
+tensor(0.9711, device='cuda:0')
+Iter 310 :Current Acc 0.9406 :Max Acc 0.9403 , Current nmi 0.9117 :Max nmi 0.9114 , Current kappa 0.9206 :Max kappa 0.9202
+total_loss tensor(0.0289, device='cuda:0') reconstr_loss tensor(0.0150, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9723, device='cuda:0')
+Iter 320 :Current Acc 0.9407 :Max Acc 0.9407 , Current nmi 0.9115 :Max nmi 0.9115 , Current kappa 0.9206 :Max kappa 0.9206
+total_loss tensor(0.0242, device='cuda:0') reconstr_loss tensor(0.0108, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9729, device='cuda:0')
+Iter 330 :Current Acc 0.9406 :Max Acc 0.9406 , Current nmi 0.9116 :Max nmi 0.9116 , Current kappa 0.9205 :Max kappa 0.9205
+total_loss tensor(0.0224, device='cuda:0') reconstr_loss tensor(0.0095, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9752, device='cuda:0')
+Iter 340 :Current Acc 0.9407 :Max Acc 0.9406 , Current nmi 0.9117 :Max nmi 0.9117 , Current kappa 0.9207 :Max kappa 0.9206
+total_loss tensor(0.0212, device='cuda:0') reconstr_loss tensor(0.0088, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9758, device='cuda:0')
+Iter 350 :Current Acc 0.9408 :Max Acc 0.9407 , Current nmi 0.9118 :Max nmi 0.9117 , Current kappa 0.9208 :Max kappa 0.9207
+total_loss tensor(0.0252, device='cuda:0') reconstr_loss tensor(0.0129, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9755, device='cuda:0')
+Iter 360 :Current Acc 0.9408 :Max Acc 0.9408 , Current nmi 0.9119 :Max nmi 0.9118 , Current kappa 0.9209 :Max kappa 0.9208
+total_loss tensor(0.0209, device='cuda:0') reconstr_loss tensor(0.0089, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9765, device='cuda:0')
+Iter 370 :Current Acc 0.9407 :Max Acc 0.9408 , Current nmi 0.9118 :Max nmi 0.9118 , Current kappa 0.9207 :Max kappa 0.9208
+total_loss tensor(0.0195, device='cuda:0') reconstr_loss tensor(0.0080, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9778, device='cuda:0')
+Iter 380 :Current Acc 0.9407 :Max Acc 0.9407 , Current nmi 0.9118 :Max nmi 0.9118 , Current kappa 0.9207 :Max kappa 0.9207
+total_loss tensor(0.0186, device='cuda:0') reconstr_loss tensor(0.0073, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9781, device='cuda:0')
+Iter 390 :Current Acc 0.9408 :Max Acc 0.9407 , Current nmi 0.9119 :Max nmi 0.9118 , Current kappa 0.9209 :Max kappa 0.9207
+total_loss tensor(0.0277, device='cuda:0') reconstr_loss tensor(0.0159, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9762, device='cuda:0')
+Iter 399 :Current Acc 0.9410 :Max Acc 0.9407 , Current nmi 0.9121 :Max nmi 0.9118 , Current kappa 0.9210 :Max kappa 0.9206
+total_loss tensor(0.0212, device='cuda:0') reconstr_loss tensor(0.0097, device='cuda:0') kl_loss tensor(0.0029, device='cuda:0')
+tensor(0.9782, device='cuda:0')
+Running time:  237.61359167099
+this is 9round
+torch.Size([1568, 6])
+Partition 0: 8510 clusters
+Partition 1: 2018 clusters
+Partition 2: 403 clusters
+Partition 3: 69 clusters
+Partition 4: 11 clusters
+Partition 5: 4 clusters
+Ae(
+  (encoder): Sequential(
+    (cov01): Conv2d(8, 32, kernel_size=(1, 1), stride=(1, 1), padding=same)
+    (bn01): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu01): ReLU(inplace=True)
+    (cov02): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn02): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu02): ReLU(inplace=True)
+    (cov03): Conv2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=same)
+    (bn03): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (relu03): ReLU(inplace=True)
+  )
+  (decoder): Sequential(
+    (tr01): ConvTranspose2d(32, 32, kernel_size=(3, 3), stride=(1, 1), padding=(1, 1))
+    (rbn): BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (rre01): ReLU(inplace=True)
+    (tr02): ConvTranspose2d(32, 8, kernel_size=(1, 1), stride=(1, 1))
+  )
+)
+Epoch 0 loss=1.0516
+Epoch 1 loss=0.6778
+Epoch 2 loss=0.5588
+Epoch 3 loss=0.4760
+Epoch 4 loss=0.4105
+Epoch 5 loss=0.3577
+Epoch 6 loss=0.3154
+Epoch 7 loss=0.2804
+Epoch 8 loss=0.2516
+Epoch 9 loss=0.2271
+Model saved to weight/trento.pkl.
+Load pre-trained model from 
+Initial Cluster Centers:  [1 1 1 ... 2 1 3]
+Initialize D
+Shape of D:  (30, 1568)
+Initialization of D Finished
+Iter 0 :Current Acc 0.8928 :Max Acc 0.0000 , Current nmi 0.8226 :Max nmi 0.0000 , Current kappa 0.8565 :Max kappa 0.0000
+total_loss tensor(0.2440, device='cuda:0') reconstr_loss tensor(0.2145, device='cuda:0') kl_loss tensor(0.0078, device='cuda:0')
+tensor(0., device='cuda:0')
+Iter 10 :Current Acc 0.7475 :Max Acc 0.7475 , Current nmi 0.7471 :Max nmi 0.7471 , Current kappa 0.6459 :Max kappa 0.6459
+total_loss tensor(0.2516, device='cuda:0') reconstr_loss tensor(0.1955, device='cuda:0') kl_loss tensor(0.0122, device='cuda:0')
+tensor(0.2804, device='cuda:0')
+Iter 20 :Current Acc 0.7572 :Max Acc 0.7556 , Current nmi 0.7893 :Max nmi 0.7844 , Current kappa 0.6604 :Max kappa 0.6579
+total_loss tensor(0.1889, device='cuda:0') reconstr_loss tensor(0.1353, device='cuda:0') kl_loss tensor(0.0084, device='cuda:0')
+tensor(0.6996, device='cuda:0')
+Iter 30 :Current Acc 0.7681 :Max Acc 0.7556 , Current nmi 0.8020 :Max nmi 0.7844 , Current kappa 0.6789 :Max kappa 0.6579
+total_loss tensor(0.1489, device='cuda:0') reconstr_loss tensor(0.1027, device='cuda:0') kl_loss tensor(0.0075, device='cuda:0')
+tensor(0.6470, device='cuda:0')
+Iter 40 :Current Acc 0.8579 :Max Acc 0.7556 , Current nmi 0.8158 :Max nmi 0.7844 , Current kappa 0.8087 :Max kappa 0.6579
+total_loss tensor(0.1325, device='cuda:0') reconstr_loss tensor(0.0877, device='cuda:0') kl_loss tensor(0.0087, device='cuda:0')
+tensor(0.6117, device='cuda:0')
+Iter 50 :Current Acc 0.8949 :Max Acc 0.7556 , Current nmi 0.8229 :Max nmi 0.7844 , Current kappa 0.8592 :Max kappa 0.6579
+total_loss tensor(0.1142, device='cuda:0') reconstr_loss tensor(0.0735, device='cuda:0') kl_loss tensor(0.0089, device='cuda:0')
+tensor(0.6593, device='cuda:0')
+Iter 60 :Current Acc 0.9073 :Max Acc 0.9073 , Current nmi 0.8401 :Max nmi 0.8401 , Current kappa 0.8759 :Max kappa 0.8759
+total_loss tensor(0.1023, device='cuda:0') reconstr_loss tensor(0.0647, device='cuda:0') kl_loss tensor(0.0081, device='cuda:0')
+tensor(0.7906, device='cuda:0')
+Iter 70 :Current Acc 0.9214 :Max Acc 0.9214 , Current nmi 0.8624 :Max nmi 0.8624 , Current kappa 0.8949 :Max kappa 0.8949
+total_loss tensor(0.0888, device='cuda:0') reconstr_loss tensor(0.0572, device='cuda:0') kl_loss tensor(0.0073, device='cuda:0')
+tensor(0.8266, device='cuda:0')
+Iter 80 :Current Acc 0.9269 :Max Acc 0.9269 , Current nmi 0.8742 :Max nmi 0.8742 , Current kappa 0.9022 :Max kappa 0.9022
+total_loss tensor(0.0775, device='cuda:0') reconstr_loss tensor(0.0492, device='cuda:0') kl_loss tensor(0.0065, device='cuda:0')
+tensor(0.8641, device='cuda:0')
+Iter 90 :Current Acc 0.9306 :Max Acc 0.9306 , Current nmi 0.8834 :Max nmi 0.8834 , Current kappa 0.9072 :Max kappa 0.9072
+total_loss tensor(0.0737, device='cuda:0') reconstr_loss tensor(0.0476, device='cuda:0') kl_loss tensor(0.0061, device='cuda:0')
+tensor(0.8813, device='cuda:0')
+Iter 100 :Current Acc 0.9325 :Max Acc 0.9325 , Current nmi 0.8892 :Max nmi 0.8892 , Current kappa 0.9098 :Max kappa 0.9098
+total_loss tensor(0.0639, device='cuda:0') reconstr_loss tensor(0.0391, device='cuda:0') kl_loss tensor(0.0058, device='cuda:0')
+tensor(0.8944, device='cuda:0')
+Iter 110 :Current Acc 0.9338 :Max Acc 0.9338 , Current nmi 0.8933 :Max nmi 0.8933 , Current kappa 0.9114 :Max kappa 0.9114
+total_loss tensor(0.0588, device='cuda:0') reconstr_loss tensor(0.0355, device='cuda:0') kl_loss tensor(0.0055, device='cuda:0')
+tensor(0.9057, device='cuda:0')
+Iter 120 :Current Acc 0.9346 :Max Acc 0.9345 , Current nmi 0.8953 :Max nmi 0.8953 , Current kappa 0.9125 :Max kappa 0.9124
+total_loss tensor(0.0581, device='cuda:0') reconstr_loss tensor(0.0353, device='cuda:0') kl_loss tensor(0.0055, device='cuda:0')
+tensor(0.9125, device='cuda:0')
+Iter 130 :Current Acc 0.9347 :Max Acc 0.9347 , Current nmi 0.8956 :Max nmi 0.8956 , Current kappa 0.9126 :Max kappa 0.9126
+total_loss tensor(0.0519, device='cuda:0') reconstr_loss tensor(0.0298, device='cuda:0') kl_loss tensor(0.0052, device='cuda:0')
+tensor(0.9193, device='cuda:0')
+Iter 140 :Current Acc 0.9349 :Max Acc 0.9349 , Current nmi 0.8964 :Max nmi 0.8964 , Current kappa 0.9129 :Max kappa 0.9129
+total_loss tensor(0.0530, device='cuda:0') reconstr_loss tensor(0.0322, device='cuda:0') kl_loss tensor(0.0049, device='cuda:0')
+tensor(0.9253, device='cuda:0')
+Iter 150 :Current Acc 0.9352 :Max Acc 0.9352 , Current nmi 0.8972 :Max nmi 0.8972 , Current kappa 0.9133 :Max kappa 0.9133
+total_loss tensor(0.0450, device='cuda:0') reconstr_loss tensor(0.0250, device='cuda:0') kl_loss tensor(0.0048, device='cuda:0')
+tensor(0.9300, device='cuda:0')
+Iter 160 :Current Acc 0.9352 :Max Acc 0.9352 , Current nmi 0.8973 :Max nmi 0.8973 , Current kappa 0.9134 :Max kappa 0.9134
+total_loss tensor(0.0418, device='cuda:0') reconstr_loss tensor(0.0225, device='cuda:0') kl_loss tensor(0.0046, device='cuda:0')
+tensor(0.9356, device='cuda:0')
+Iter 170 :Current Acc 0.9354 :Max Acc 0.9354 , Current nmi 0.8982 :Max nmi 0.8982 , Current kappa 0.9136 :Max kappa 0.9136
+total_loss tensor(0.0434, device='cuda:0') reconstr_loss tensor(0.0249, device='cuda:0') kl_loss tensor(0.0045, device='cuda:0')
+tensor(0.9382, device='cuda:0')
+Iter 180 :Current Acc 0.9354 :Max Acc 0.9355 , Current nmi 0.8986 :Max nmi 0.8986 , Current kappa 0.9135 :Max kappa 0.9137
+total_loss tensor(0.0378, device='cuda:0') reconstr_loss tensor(0.0197, device='cuda:0') kl_loss tensor(0.0044, device='cuda:0')
+tensor(0.9412, device='cuda:0')
+Iter 190 :Current Acc 0.9353 :Max Acc 0.9354 , Current nmi 0.8989 :Max nmi 0.8989 , Current kappa 0.9135 :Max kappa 0.9136
+total_loss tensor(0.0357, device='cuda:0') reconstr_loss tensor(0.0181, device='cuda:0') kl_loss tensor(0.0042, device='cuda:0')
+tensor(0.9442, device='cuda:0')
+Iter 200 :Current Acc 0.9359 :Max Acc 0.9359 , Current nmi 0.9000 :Max nmi 0.9000 , Current kappa 0.9142 :Max kappa 0.9142
+total_loss tensor(0.0372, device='cuda:0') reconstr_loss tensor(0.0203, device='cuda:0') kl_loss tensor(0.0041, device='cuda:0')
+tensor(0.9469, device='cuda:0')
+Iter 210 :Current Acc 0.9361 :Max Acc 0.9361 , Current nmi 0.9003 :Max nmi 0.9002 , Current kappa 0.9145 :Max kappa 0.9145
+total_loss tensor(0.0333, device='cuda:0') reconstr_loss tensor(0.0168, device='cuda:0') kl_loss tensor(0.0040, device='cuda:0')
+tensor(0.9491, device='cuda:0')
+Iter 220 :Current Acc 0.9376 :Max Acc 0.9371 , Current nmi 0.9044 :Max nmi 0.9028 , Current kappa 0.9165 :Max kappa 0.9159
+total_loss tensor(0.0313, device='cuda:0') reconstr_loss tensor(0.0152, device='cuda:0') kl_loss tensor(0.0040, device='cuda:0')
+tensor(0.9506, device='cuda:0')
+Iter 230 :Current Acc 0.9392 :Max Acc 0.9393 , Current nmi 0.9097 :Max nmi 0.9095 , Current kappa 0.9187 :Max kappa 0.9188
+total_loss tensor(0.0341, device='cuda:0') reconstr_loss tensor(0.0185, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9547, device='cuda:0')
+Iter 240 :Current Acc 0.9394 :Max Acc 0.9394 , Current nmi 0.9102 :Max nmi 0.9102 , Current kappa 0.9190 :Max kappa 0.9190
+total_loss tensor(0.0305, device='cuda:0') reconstr_loss tensor(0.0152, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9571, device='cuda:0')
+Iter 250 :Current Acc 0.9398 :Max Acc 0.9398 , Current nmi 0.9108 :Max nmi 0.9108 , Current kappa 0.9195 :Max kappa 0.9195
+total_loss tensor(0.0278, device='cuda:0') reconstr_loss tensor(0.0131, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9611, device='cuda:0')
+Iter 260 :Current Acc 0.9399 :Max Acc 0.9399 , Current nmi 0.9112 :Max nmi 0.9112 , Current kappa 0.9196 :Max kappa 0.9196
+total_loss tensor(0.0265, device='cuda:0') reconstr_loss tensor(0.0124, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9639, device='cuda:0')
+Iter 270 :Current Acc 0.9401 :Max Acc 0.9401 , Current nmi 0.9114 :Max nmi 0.9115 , Current kappa 0.9198 :Max kappa 0.9199
+total_loss tensor(0.0334, device='cuda:0') reconstr_loss tensor(0.0189, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9628, device='cuda:0')
+Iter 280 :Current Acc 0.9404 :Max Acc 0.9404 , Current nmi 0.9117 :Max nmi 0.9117 , Current kappa 0.9202 :Max kappa 0.9202
+total_loss tensor(0.0269, device='cuda:0') reconstr_loss tensor(0.0132, device='cuda:0') kl_loss tensor(0.0034, device='cuda:0')
+tensor(0.9681, device='cuda:0')
+Iter 290 :Current Acc 0.9403 :Max Acc 0.9405 , Current nmi 0.9115 :Max nmi 0.9117 , Current kappa 0.9202 :Max kappa 0.9204
+total_loss tensor(0.0246, device='cuda:0') reconstr_loss tensor(0.0110, device='cuda:0') kl_loss tensor(0.0034, device='cuda:0')
+tensor(0.9679, device='cuda:0')
+Iter 300 :Current Acc 0.9405 :Max Acc 0.9405 , Current nmi 0.9117 :Max nmi 0.9118 , Current kappa 0.9204 :Max kappa 0.9205
+total_loss tensor(0.0234, device='cuda:0') reconstr_loss tensor(0.0103, device='cuda:0') kl_loss tensor(0.0033, device='cuda:0')
+tensor(0.9711, device='cuda:0')
+Iter 310 :Current Acc 0.9404 :Max Acc 0.9404 , Current nmi 0.9116 :Max nmi 0.9116 , Current kappa 0.9202 :Max kappa 0.9202
+total_loss tensor(0.0229, device='cuda:0') reconstr_loss tensor(0.0100, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9730, device='cuda:0')
+Iter 320 :Current Acc 0.9405 :Max Acc 0.9403 , Current nmi 0.9117 :Max nmi 0.9115 , Current kappa 0.9204 :Max kappa 0.9202
+total_loss tensor(0.0297, device='cuda:0') reconstr_loss tensor(0.0159, device='cuda:0') kl_loss tensor(0.0036, device='cuda:0')
+tensor(0.9699, device='cuda:0')
+Iter 330 :Current Acc 0.9407 :Max Acc 0.9403 , Current nmi 0.9118 :Max nmi 0.9115 , Current kappa 0.9207 :Max kappa 0.9202
+total_loss tensor(0.0237, device='cuda:0') reconstr_loss tensor(0.0110, device='cuda:0') kl_loss tensor(0.0032, device='cuda:0')
+tensor(0.9726, device='cuda:0')
+Iter 340 :Current Acc 0.9408 :Max Acc 0.9409 , Current nmi 0.9119 :Max nmi 0.9121 , Current kappa 0.9208 :Max kappa 0.9210
+total_loss tensor(0.0214, device='cuda:0') reconstr_loss tensor(0.0093, device='cuda:0') kl_loss tensor(0.0031, device='cuda:0')
+tensor(0.9755, device='cuda:0')
+Iter 350 :Current Acc 0.9408 :Max Acc 0.9408 , Current nmi 0.9120 :Max nmi 0.9118 , Current kappa 0.9209 :Max kappa 0.9208
+total_loss tensor(0.0203, device='cuda:0') reconstr_loss tensor(0.0084, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9758, device='cuda:0')
+Iter 360 :Current Acc 0.9408 :Max Acc 0.9408 , Current nmi 0.9119 :Max nmi 0.9120 , Current kappa 0.9209 :Max kappa 0.9208
+total_loss tensor(0.0198, device='cuda:0') reconstr_loss tensor(0.0080, device='cuda:0') kl_loss tensor(0.0030, device='cuda:0')
+tensor(0.9764, device='cuda:0')
+Iter 370 :Current Acc 0.9403 :Max Acc 0.9408 , Current nmi 0.9114 :Max nmi 0.9120 , Current kappa 0.9202 :Max kappa 0.9208
+total_loss tensor(0.0247, device='cuda:0') reconstr_loss tensor(0.0112, device='cuda:0') kl_loss tensor(0.0035, device='cuda:0')
+tensor(0.9683, device='cuda:0')
+Iter 380 :Current Acc 0.9357 :Max Acc 0.9408 , Current nmi 0.9061 :Max nmi 0.9120 , Current kappa 0.9140 :Max kappa 0.9208
+total_loss tensor(0.0230, device='cuda:0') reconstr_loss tensor(0.0087, device='cuda:0') kl_loss tensor(0.0037, device='cuda:0')
+tensor(0.9461, device='cuda:0')
+Iter 390 :Current Acc 0.9274 :Max Acc 0.9408 , Current nmi 0.8989 :Max nmi 0.9120 , Current kappa 0.9031 :Max kappa 0.9208
+total_loss tensor(0.0229, device='cuda:0') reconstr_loss tensor(0.0077, device='cuda:0') kl_loss tensor(0.0038, device='cuda:0')
+tensor(0.9051, device='cuda:0')
+Iter 399 :Current Acc 0.9220 :Max Acc 0.9408 , Current nmi 0.8957 :Max nmi 0.9120 , Current kappa 0.8960 :Max kappa 0.9208
+total_loss tensor(0.0228, device='cuda:0') reconstr_loss tensor(0.0073, device='cuda:0') kl_loss tensor(0.0039, device='cuda:0')
+tensor(0.9006, device='cuda:0')
+Running time:  420.6724503040314
+cav: [0.79995042 0.61129866 0.09979123 0.9998575  0.97429769 0.67271582]
+average_acc: 0.8783146885549744
+average_nmi: 0.8714954652084647
+average_kappa 0.835441735885617
+Best ACC 0.9408  Best NMI 0.912956  Best kappa 0.920820
+hello world
