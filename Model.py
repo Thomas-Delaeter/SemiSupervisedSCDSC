@@ -119,6 +119,30 @@ class C_EDESC(nn.Module):
 
         return total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2
 
+    def total_loss_semi(self, x, x_bar, center, target, dim, n_clusters, s, index, y, y_pred):
+        # Reconstruction loss
+        reconstr_loss = F.mse_loss(x_bar, x)
+        kl_loss = F.kl_div(center.log(), target.data)
+        # Constraints
+        d_cons1 = D_constraint1()
+        d_cons2 = D_constraint2()
+        loss_d1 = d_cons1(self.D)
+        loss_d2 = d_cons2(self.D, dim, n_clusters)
+
+        location = torch.tensor(index, device=device).T
+        smooth_pred = spatial_filter(s, location, args.image_size)
+        loss_smooth = F.kl_div(s.log(), smooth_pred.data)
+
+
+        # crossentropy
+        a = y_pred.numel()
+        cross_loss = F.cross_entropy(y_pred, torch.from_numpy(y).long()) if not y_pred.numel() == 0 else torch.tensor(0)
+
+        total_loss = reconstr_loss + loss_d1 + loss_d2 + args.alpha * kl_loss + args.beta * loss_smooth + cross_loss
+
+
+        return total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2, cross_loss
+
 def spatial_filter(data_matrix, location, image_size):
     data_matrix = data_matrix.reshape([data_matrix.shape[0], -1])
     S_matrix = torch.zeros([image_size[0], image_size[1], data_matrix.shape[1]],device=device)
@@ -160,7 +184,7 @@ def pretrain_ae(model):
             x = x.to(device)
             optimizer.zero_grad()
             x_bar, z = model(x)
-            loss = F.mse_loss(x_bar, x)
+            loss = F.mse_loss(x_bar, x) #+ F.cross_entropy()
             total_loss += loss.item()
             loss.backward()
             optimizer.step()
@@ -212,6 +236,8 @@ def train_EDESC(device, i):
     from torch_scatter import scatter_mean
     max_ratio = 0
 
+    label_pct = 0.01 #passed as decimal number
+
 
 
     for epoch in range(epochs):
@@ -225,7 +251,7 @@ def train_EDESC(device, i):
         refined_center = refined_subspace_affinity(original_center)
 
         y_pred = s.cpu().detach().numpy().argmax(1)
-        y_best, acc, kappa, nmi, ca = cluster_accuracy(y, y_pred, return_aligned=True)
+        y_best, acc, kappa, nmi, ca, mapping = cluster_accuracy(y, y_pred, return_aligned=True)
 
         if ratio > max_ratio:
             accmax = acc
@@ -235,12 +261,44 @@ def train_EDESC(device, i):
             max_ratio = ratio
 
 
+        # since y_best is a remap, we add the mapping to the logits.
+        logits = s.cpu()#.detach().numpy() #is detaching allowed?
 
-        total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2 = model.total_loss(x=data, x_bar=x_bar,
-                                                                                center=original_center,
-                                                                                target=refined_center,
-                                                                                dim=args.d, n_clusters=args.n_clusters,
-                                                                                s=s, index=index)
+        num_classes = logits.size(1)
+        # Create permutation index array
+        perm = [0] * num_classes
+        for old_index, new_index in mapping.items():
+            perm[new_index] = old_index
+
+        # Convert to tensor and ensure it's on the same device as logits
+        perm = torch.tensor(perm, dtype=torch.long, device=logits.device)
+
+        # Apply permutation to logits
+        y_best_logits = logits[:, perm]
+
+        # Train test splitting as an arbitrary way of limiting data
+
+        # indices should always be the same since torch.random on both devices has been set
+        indices = torch.randperm(len(y_best_logits))   # get random indices throughout the entire dataset
+        train_size = int(label_pct*len(y_best_logits)) # only use a percentage of all the indices
+        train_indices = indices[:train_size]
+
+        y_best_logits_limited = y_best_logits[train_indices]
+        y_limited = y[train_indices]
+
+        total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2, entorpy_loss = model.total_loss_semi(
+                                                                                    x=data,
+                                                                                    x_bar=x_bar,
+                                                                                    center=original_center,
+                                                                                    target=refined_center,
+                                                                                    dim=args.d,
+                                                                                    n_clusters=args.n_clusters,
+                                                                                    s=s,
+                                                                                    index=index,
+                                                                                    y = y_limited,
+                                                                                    y_pred = y_best_logits_limited
+                                                                                    )
+
         optimizer.zero_grad()
         total_loss.backward()
         optimizer.step()
@@ -249,10 +307,12 @@ def train_EDESC(device, i):
                   ':Max Acc {:.4f}'.format(accmax), ', Current nmi {:.4f}'.format(nmi),
                   ':Max nmi {:.4f}'.format(nmimax), ', Current kappa {:.4f}'.format(kappa),
                   ':Max kappa {:.4f}'.format(kappa_max))
-            print("total_loss", total_loss.data, "reconstr_loss", reconstr_loss.data, "kl_loss", kl_loss.data)
+            print("total_loss", total_loss.data, "reconstr_loss", reconstr_loss.data, "kl_loss", kl_loss.data, "entropy_loss", entorpy_loss.data)
             print(ratio)
+
     end = time.time()
     print('Running time: ', end - start)
+    print(f"percentage of labeled data used: {label_pct} meaning {len(y_best_logits_limited)}/{len(y)} used")
     return accmax, nmimax, kappa_max, ca_max
 
 
@@ -261,6 +321,8 @@ def train_EDESC(device, i):
 if __name__ == "__main__":
     import datetime
 
+    # Making sure seed has been set
+    setup_seed(42)
     # Get current time
     now = datetime.datetime.now()
     print("hello world" + str(now))
@@ -272,14 +334,14 @@ if __name__ == "__main__":
     parser.add_argument('--lnp', type=int, default=20)
     parser.add_argument('--outp', type=int, default=500)
     parser.add_argument('--smooth_window_size', type=int, default=7)
-    parser.add_argument('--pre_train_iters', type=int, default=50)
+    parser.add_argument('--pre_train_iters', type=int, default=1) # used to be 50
     parser.add_argument('--n_clusters', default=4, type=int)
     parser.add_argument('--d', default=5, type=int)
     parser.add_argument('--hierarchy', default=1, type=int)
     parser.add_argument('--n_z', default=32, type=int)
     parser.add_argument('--eta', default=5, type=int)
     parser.add_argument('--dataset', type=str, default='Houston')
-    parser.add_argument('--device_index', type=int, default=1)
+    parser.add_argument('--device_index', type=int, default=0)
     parser.add_argument('--pretrain_path', type=str, default='data/flood/pre.pkl')
     parser.add_argument('--alpha', default=3, type=float, help='the weight of kl_loss')
     parser.add_argument('--beta', default=8, type=float, help='the weight of local_loss')
@@ -358,4 +420,3 @@ if __name__ == "__main__":
     print("average_nmi:", average_nmi)
     print("average_kappa", average_kappa)
     print('Best ACC {:.4f}'.format(bestacc), ' Best NMI {:4f}'.format(bestnmi), ' Best kappa {:4f}'.format(kappa))
-    print("hello world")

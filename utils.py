@@ -40,8 +40,12 @@ def cluster_accuracy(y_true, y_pre, return_aligned=False):
     ari = metrics.adjusted_rand_score(y_true, y_best)
     fscore = metrics.f1_score(y_true, y_best, average='micro')
     ca = class_acc(y_true, y_best)
+
+    # Map of predicted clusters to true clusters
+    cluster_mapping = {int(Label2[i]): int(Label1[c[i]]) for i in range(len(Label2))}
+
     if return_aligned:
-        return y_best, acc, kappa, nmi, ca
+        return y_best, acc, kappa, nmi, ca, cluster_mapping
     return acc, kappa, nmi
 
 
