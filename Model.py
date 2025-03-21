@@ -69,9 +69,24 @@ class C_EDESC(nn.Module):
         self.ae = Ae(
             n_input=n_input,
             n_z=n_z)
+
         # Subspace bases proxy
         self.D = Parameter(torch.Tensor(n_z * 7 * 7, n_clusters))
+        nn.init.xavier_uniform_(self.D) # stable inplace init of D
         print(self.D.shape)
+
+        # Pseudo-Graph Module
+        # TODO: batch_size
+        # Makes it O(n**2) again, so best to avoid?
+        # proposed method uses small set of samples to train network
+        # Not end to end trainable anymore
+        # self.Coef = Parameter(torch.Tensor(batch_size,batch_size))
+        # nn.init.constant_(self.Coef, 1e-5)
+
+        # Pseudo-Label Module
+        # Where does this 7x7 come from, (same as r74)?
+        latent_dim = n_z * 7 * 7
+        self.pseudo_classifier = nn.Linear(latent_dim, n_clusters)
 
     def pretrain(self, path=''):
         if path == '':
@@ -99,7 +114,17 @@ class C_EDESC(nn.Module):
                 s = torch.cat((s, si), 1)
         s = (s + eta * d) / ((eta + 1) * d)
         s = (s.t() / torch.sum(s, 1)).t()
-        return x_bar, s, z
+
+        # Pseudo Graph
+        # Compute self-expressive latent: each sample is reconstructed as a linear combination
+        # of all other samples via the Coef matrix.
+        # z_expr = torch.matmul(self.Coef, z)
+        # Compute self-expression loss later as e.g. MSE(z_expr, z)
+
+        # Pseudo Label
+        pseudo_logits = self.pseudo_classifier(z)
+
+        return x_bar, s, z, pseudo_logits
 
     def total_loss(self, x, x_bar, center, target, dim, n_clusters, s, index):
         # Reconstruction loss
@@ -135,13 +160,58 @@ class C_EDESC(nn.Module):
 
 
         # crossentropy
-        a = y_pred.numel()
         cross_loss = F.cross_entropy(y_pred, torch.from_numpy(y).long()) if not y_pred.numel() == 0 else torch.tensor(0)
 
         total_loss = reconstr_loss + loss_d1 + loss_d2 + args.alpha * kl_loss + args.beta * loss_smooth + cross_loss
 
 
         return total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2, cross_loss
+
+    def total_loss_semi_pseudo(self, x, x_bar, center, target, dim, n_clusters, s, index, y, y_limited, y_pred, pseudo_logits):
+        # Reconstruction loss
+        reconstr_loss = F.mse_loss(x_bar, x)
+        kl_loss = F.kl_div(center.log(), target.data)
+
+        # Makes it not end-to-end trainable on big networks
+        # # Self-expression loss
+        # selfexp_loss = F.mse_loss(z_expr, z)
+        #
+        # # Pseudo-graph loss
+        # Coef_abs = torch.abs(self.Coef)
+        # C = (Coef_abs + Coef_abs.t()) * .5 + torch.eye(self.Coef.shape[1], device=self.Coef.device)
+        # D_mat = torch.diag(torch.sum(C, dim=1)) # graph Laplacian L = D-C, D is degree matrix
+        # L = D_mat - C
+        # # graph loss: trace(X^T L X) where X is the flattened input
+        # x_flat = x.reshape(x.shape[0], -1)
+        # graph_loss = torch.trace(torch.matmul(torch.matmul(x_flat.t(), L), x_flat))
+
+        # Constraints
+        d_cons1 = D_constraint1()
+        d_cons2 = D_constraint2()
+        loss_d1 = d_cons1(self.D)
+        loss_d2 = d_cons2(self.D, dim, n_clusters)
+
+        location = torch.tensor(index, device=device).T
+        smooth_pred = spatial_filter(s, location, args.image_size)
+        loss_smooth = F.kl_div(s.log(), smooth_pred.data)
+
+        # Pseudo Label Loss
+        # Samples with high confidence (e.g. max probability > 0.8, like PSSC)
+        max_probs, _ = torch.max(F.softmax(pseudo_logits, dim=1), dim=1)
+        confident_mask = (max_probs > args.pseudo_threshold)
+        if confident_mask.sum() > 0 and y is not None:
+            pseudo_loss = F.cross_entropy(pseudo_logits[confident_mask], torch.from_numpy(y[confident_mask.cpu().numpy()]).long().to(device))
+        else:
+            pseudo_loss = torch.tensor(0.0, device=device)
+
+
+        # Cross-Entropy Loss
+        cross_loss = F.cross_entropy(y_pred, torch.from_numpy(y_limited).long()) if not y_pred.numel() == 0 else torch.tensor(0)
+
+        total_loss = reconstr_loss + loss_d1 + loss_d2 + args.alpha * kl_loss + args.beta * loss_smooth+ args.delta * cross_loss + args.epsilon * pseudo_loss
+
+
+        return total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2, cross_loss, pseudo_loss
 
 def spatial_filter(data_matrix, location, image_size):
     data_matrix = data_matrix.reshape([data_matrix.shape[0], -1])
@@ -204,20 +274,23 @@ def train_EDESC(device, i):
 
     start = time.time()
     data = dataset.x
+    data = data.astype(np.float16)
     y = dataset.y
 
     # utilze finch to generate big groups
     from finch import FINCH
-    c, num_clust, req_c1 = FINCH(data.reshape(data.shape[0], -1))
+    data = data.reshape(data.shape[0], -1)
+    c, num_clust, req_c1 = FINCH(data)
     req_c = c[:, args.hierarchy]
 
-    model.pretrain('')
+    # model.pretrain('')
+    model.pretrain(f'weight/{args.dataset}.pkl')
     data = dataset.train
     optimizer = Adam(model.parameters(), lr=args.lr)
     index = dataset.index
     data = torch.Tensor(data).to(device)
     x_bar, hidden = get_initial_value(model, data)
-    random_seed = random.randint(1, 10000)
+    random_seed = 42
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=30, random_state=random_seed)
     y_pred = kmeans.fit_predict(hidden.data.cpu().numpy().reshape(dataset.__len__(), -1))
     print("Initial Cluster Centers: ", y_pred)
@@ -236,13 +309,12 @@ def train_EDESC(device, i):
     from torch_scatter import scatter_mean
     max_ratio = 0
 
-    label_pct = 0.01 #passed as decimal number
-
-
+    #passed as decimal number
+    label_pct = args.label_usage #0.01
 
     for epoch in range(epochs):
 
-        x_bar, s, z = model(data)
+        x_bar, s, z, pseudo_logits = model(data)
 
         ratio = (s > 0.90).sum() / s.shape[0]
 
@@ -286,7 +358,7 @@ def train_EDESC(device, i):
         y_best_logits_limited = y_best_logits[train_indices]
         y_limited = y[train_indices]
 
-        total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2, entorpy_loss = model.total_loss_semi(
+        total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2, entropy_loss, pseudo_loss = model.total_loss_semi_pseudo(
                                                                                     x=data,
                                                                                     x_bar=x_bar,
                                                                                     center=original_center,
@@ -295,8 +367,10 @@ def train_EDESC(device, i):
                                                                                     n_clusters=args.n_clusters,
                                                                                     s=s,
                                                                                     index=index,
-                                                                                    y = y_limited,
-                                                                                    y_pred = y_best_logits_limited
+                                                                                    y = y,
+                                                                                    y_limited = y_limited,
+                                                                                    y_pred = y_best_logits_limited,
+                                                                                    pseudo_logits=pseudo_logits
                                                                                     )
 
         optimizer.zero_grad()
@@ -307,7 +381,7 @@ def train_EDESC(device, i):
                   ':Max Acc {:.4f}'.format(accmax), ', Current nmi {:.4f}'.format(nmi),
                   ':Max nmi {:.4f}'.format(nmimax), ', Current kappa {:.4f}'.format(kappa),
                   ':Max kappa {:.4f}'.format(kappa_max))
-            print("total_loss", total_loss.data, "reconstr_loss", reconstr_loss.data, "kl_loss", kl_loss.data, "entropy_loss", entorpy_loss.data)
+            print("total_loss", total_loss.data, "reconstr_loss", reconstr_loss.data, "kl_loss", kl_loss.data, "entropy_loss", entropy_loss.data, "pseudo_loss", pseudo_loss.data)
             print(ratio)
 
     end = time.time()
@@ -325,7 +399,7 @@ if __name__ == "__main__":
     setup_seed(42)
     # Get current time
     now = datetime.datetime.now()
-    print("hello world" + str(now))
+    print("hello world: " + str(now))
 
     parser = argparse.ArgumentParser(
         description='EDESC training',
@@ -334,19 +408,22 @@ if __name__ == "__main__":
     parser.add_argument('--lnp', type=int, default=20)
     parser.add_argument('--outp', type=int, default=500)
     parser.add_argument('--smooth_window_size', type=int, default=7)
-    parser.add_argument('--pre_train_iters', type=int, default=1) # used to be 50
+    parser.add_argument('--pre_train_iters', type=int, default=50)
     parser.add_argument('--n_clusters', default=4, type=int)
     parser.add_argument('--d', default=5, type=int)
     parser.add_argument('--hierarchy', default=1, type=int)
     parser.add_argument('--n_z', default=32, type=int)
     parser.add_argument('--eta', default=5, type=int)
-    parser.add_argument('--dataset', type=str, default='Houston')
+    parser.add_argument('--dataset', type=str, default='trento')
     parser.add_argument('--device_index', type=int, default=0)
-    parser.add_argument('--pretrain_path', type=str, default='data/flood/pre.pkl')
+    parser.add_argument('--pretrain_path', type=str, default='./tmp/flood/pre.pkl')
     parser.add_argument('--alpha', default=3, type=float, help='the weight of kl_loss')
     parser.add_argument('--beta', default=8, type=float, help='the weight of local_loss')
     parser.add_argument('--gama', default=0.03, type=float, help='the weight of non_local_loss')
-
+    parser.add_argument('--delta', default=.0, type=float, help='the weight of the cross_entropy_loss')
+    parser.add_argument('--label_usage', default=.01, type=float, help='decimal deciding how much labeled data to be used during training')
+    parser.add_argument('--epsilon', default=.0, type=float, help='the weight of the pseudo_label_loss')
+    parser.add_argument('--pseudo_threshold', default=.8, type=float, help='minimum confidence of the pseudo predications to be used')
 
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()

@@ -227,18 +227,47 @@ class Load_my_Dataset():
 
         # perform PCA
         from sklearn.decomposition import PCA
+        # X = scale(X.reshape(n_row * n_column, n_band))
+        # # np.savetxt('X.txt', X, fmt='%d', delimiter=' ')
+        # n_components = 8
+        # pca = PCA(n_components)
+        # X = pca.fit_transform(X.reshape(n_row * n_column, n_band)).reshape((n_row, n_column, n_components))
+        #
+        # x_patches, y_patches, index = get_HSI_patches(x=X, gt=Y, ksize=(17, 17), is_labeled=True)
+        # x_patches = scale(x_patches.reshape(x_patches.shape[0], -1))
+        #
+        # n_components = 300
+        # pca = PCA(n_components)
+        # print("step1ok")
+        # x_patches = pca.fit_transform(x_patches)
         X = scale(X.reshape(n_row * n_column, n_band))
         n_components = 8
-        pca = PCA(n_components)
-        X = pca.fit_transform(X.reshape(n_row * n_column, n_band)).reshape((n_row, n_column, n_components))
+        pca = PCA(n_components, random_state=42)
+        X = X.reshape(n_row*n_column, n_band)
+
+        print(f'X shape before pca 8comp. : {X.shape}')
+        X = pca.fit_transform(X)
+        print(f'X shape after pca 8comp. : {X.shape}')
+
+        X = X.reshape((n_row, n_column, n_components))
+        print(f'X shape reverted back to: {X.shape}')
 
         x_patches, y_patches, index = get_HSI_patches(x=X, gt=Y, ksize=(17, 17), is_labeled=True)
-        x_patches = scale(x_patches.reshape(x_patches.shape[0], -1))
+        x_patches = x_patches.reshape(x_patches.shape[0], -1)
+        x_patches = scale(x_patches)
 
-        n_components = 300
-        pca = PCA(n_components)
+        n_components = 30
+        #pca2 = PCA(n_components=n_components, random_state=42)
         print("step1ok")
-        x_patches = pca.fit_transform(x_patches)
+
+        print(f"x_patches Shape: {x_patches.shape}")
+        #x_patches_new = np.loadtxt('XL.txt', delimiter=' ')
+        #x_patches = pca2.fit_transform(x_patches)
+        from pca_helper import pca_helper_func,pca_transform
+        x_patches2=pca_transform(x_patches,300)
+        x_patches=pca_helper_func(300,x_patches)
+
+        print('normalizing patches')
         x_patches = normalize(X=x_patches)
         x_train, _, _ = get_HSI_patches(x=X, gt=Y, ksize=(7, 7), is_labeled=True)
         x_train = np.transpose(x_train, axes=(0, 3, 1, 2))
