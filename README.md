@@ -1,2 +1,2 @@
-# SCDSC
-The source code of paper: "Scalable Context-Preserving Model-Aware Deep Clustering for Hyperspectral Images"
+# Semi-Supervised SCDSC
+The source code of paper: "Semi-Supervised Deep Subspace Clustering on Hyperspectral Images"
