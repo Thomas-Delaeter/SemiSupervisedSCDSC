@@ -21,6 +21,11 @@ import time
 import os
 import random
 
+from faster_mix_k_means_pytorch import K_Means as SemiSupKMeans
+from cluster_and_log_utils import log_accs_from_preds
+from sklearn.metrics import accuracy_score
+
+
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.enabled = True
 
@@ -290,10 +295,64 @@ def train_EDESC(device, i):
     index = dataset.index
     data = torch.Tensor(data).to(device)
     x_bar, hidden = get_initial_value(model, data)
+
+    #passed as decimal number
+    label_pct = args.label_usage #0.01
+
+    # TODO: chances are that not all classes are within the l_feats selection
+    # indices should always be the same since torch.random on both devices has been set
+    indices = torch.randperm(len(y))   # get random indices throughout the entire dataset
+    train_size = int(label_pct*len(y)) # only use a percentage of all the indices
+    train_indices = indices[:train_size]
+
+    mask_lab = torch.zeros(len(y), dtype=torch.bool) # Create a boolean mask of the same length as y, initialized to False
+    mask_lab[train_indices] = True # Set the indices corresponding to labelled samples to True
+    u_feats = data[~mask_lab]
+    # u_targets = y[~mask_lab]
+    l_feats = data[mask_lab]
+    l_targets = y[mask_lab]
+    old_classes = torch.unique(torch.from_numpy(y[train_indices])) # Get the unique classes from the labelled data (old classes)
+    old_classes = old_classes.tolist() # old classes are the classes that are discovered during training, however during inferencing there is uncertainty if new all classes have been seen
+    mask_cls = torch.tensor([label.item() in old_classes for label in y], dtype=torch.bool)
+
     random_seed = 42
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=30, random_state=random_seed)
     y_pred = kmeans.fit_predict(hidden.data.cpu().numpy().reshape(dataset.__len__(), -1))
     print("Initial Cluster Centers: ", y_pred)
+
+    kmeans = SemiSupKMeans(k=args.n_clusters, tolerance=1e-4, max_iterations=300, init='k-means++',
+                           n_init=100, random_state=random_seed, n_jobs=-1, pairwise_batch_size=1024,
+                           mode=None)
+
+    u_feats = torch.tensor(u_feats, dtype=torch.float32)
+    l_feats = torch.tensor(l_feats, dtype=torch.float32)
+    l_targets = torch.tensor(l_targets)
+    u_feats = u_feats.view(u_feats.size(0), -1)
+    l_feats = l_feats.view(l_feats.size(0), -1)
+
+    kmeans.fit_mix(u_feats, l_feats, l_targets)
+    all_preds = kmeans.labels_.cpu().numpy()
+
+    # -----------------------
+    # EVALUATE
+    # -----------------------
+    # Get preds corresponding to unlabelled set
+    # preds = all_preds[~mask_lab]
+
+    # Get portion of mask_cls which corresponds to the unlabelled set
+    # mask = mask_cls[~mask_lab].numpy()
+    # mask = mask.astype(bool)
+
+    # -----------------------
+    # EVALUATE
+    # -----------------------
+
+    all_acc, old_acc, new_acc = log_accs_from_preds(y_true=y, y_pred=all_preds, mask=mask_lab.numpy(),
+                                                    eval_funcs=['v1', 'v2'],
+                                                    save_name='SS-K-Means Train ACC Unlabelled', print_output=True)
+    print(accuracy_score(y_pred,all_preds), accuracy_score(all_preds,y_pred))
+
+
 
     # Initialize D
     D = Initialization_D(hidden.reshape(dataset.__len__(), -1), y_pred, args.n_clusters, args.d)
@@ -309,8 +368,6 @@ def train_EDESC(device, i):
     from torch_scatter import scatter_mean
     max_ratio = 0
 
-    #passed as decimal number
-    label_pct = args.label_usage #0.01
 
     for epoch in range(epochs):
 
@@ -349,12 +406,6 @@ def train_EDESC(device, i):
         y_best_logits = logits[:, perm]
 
         # Train test splitting as an arbitrary way of limiting data
-
-        # indices should always be the same since torch.random on both devices has been set
-        indices = torch.randperm(len(y_best_logits))   # get random indices throughout the entire dataset
-        train_size = int(label_pct*len(y_best_logits)) # only use a percentage of all the indices
-        train_indices = indices[:train_size]
-
         y_best_logits_limited = y_best_logits[train_indices]
         y_limited = y[train_indices]
 
