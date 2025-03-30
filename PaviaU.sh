@@ -13,7 +13,7 @@ mkdir -p "${OUTPUT_SUBDIR}"
 # fixed parameter
 lr=0.005
 smooth_window_size=7
-pre_train_iters=10
+pre_train_iters=150
 dataset='pavia'
 device_index=0
 lnp=20

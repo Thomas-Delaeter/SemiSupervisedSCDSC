@@ -39,7 +39,7 @@ def setup_seed(seed):
 
 
 # 设置随机数种子
-setup_seed(42)
+# setup_seed(42)
 
 
 def setDir(filepath):
@@ -89,7 +89,6 @@ class C_EDESC(nn.Module):
         # nn.init.constant_(self.Coef, 1e-5)
 
         # Pseudo-Label Module
-        # Where does this 7x7 come from, (same as r74)?
         latent_dim = n_z * 7 * 7
         self.pseudo_classifier = nn.Linear(latent_dim, n_clusters)
 
@@ -119,12 +118,6 @@ class C_EDESC(nn.Module):
                 s = torch.cat((s, si), 1)
         s = (s + eta * d) / ((eta + 1) * d)
         s = (s.t() / torch.sum(s, 1)).t()
-
-        # Pseudo Graph
-        # Compute self-expressive latent: each sample is reconstructed as a linear combination
-        # of all other samples via the Coef matrix.
-        # z_expr = torch.matmul(self.Coef, z)
-        # Compute self-expression loss later as e.g. MSE(z_expr, z)
 
         # Pseudo Label
         pseudo_logits = self.pseudo_classifier(z)
@@ -177,19 +170,6 @@ class C_EDESC(nn.Module):
         reconstr_loss = F.mse_loss(x_bar, x)
         kl_loss = F.kl_div(center.log(), target.data)
 
-        # Makes it not end-to-end trainable on big networks
-        # # Self-expression loss
-        # selfexp_loss = F.mse_loss(z_expr, z)
-        #
-        # # Pseudo-graph loss
-        # Coef_abs = torch.abs(self.Coef)
-        # C = (Coef_abs + Coef_abs.t()) * .5 + torch.eye(self.Coef.shape[1], device=self.Coef.device)
-        # D_mat = torch.diag(torch.sum(C, dim=1)) # graph Laplacian L = D-C, D is degree matrix
-        # L = D_mat - C
-        # # graph loss: trace(X^T L X) where X is the flattened input
-        # x_flat = x.reshape(x.shape[0], -1)
-        # graph_loss = torch.trace(torch.matmul(torch.matmul(x_flat.t(), L), x_flat))
-
         # Constraints
         d_cons1 = D_constraint1()
         d_cons2 = D_constraint2()
@@ -201,14 +181,17 @@ class C_EDESC(nn.Module):
         loss_smooth = F.kl_div(s.log(), smooth_pred.data)
 
         # Pseudo Label Loss
-        # Samples with high confidence (e.g. max probability > 0.8, like PSSC)
+        # Samples with high confidence (e.g. max probability > 0.8, like PSSC framework)
         max_probs, _ = torch.max(F.softmax(pseudo_logits, dim=1), dim=1)
         confident_mask = (max_probs > args.pseudo_threshold)
         if confident_mask.sum() > 0 and y is not None:
             pseudo_loss = F.cross_entropy(pseudo_logits[confident_mask], torch.from_numpy(y[confident_mask.cpu().numpy()]).long().to(device))
         else:
+            if args.epsilon != .0:
+                print("no pseudo labels were valuable enough to contribute")
+            global pseudo_miss #TODO: prettify this because global variables arent really clean code
+            pseudo_miss+=1
             pseudo_loss = torch.tensor(0.0, device=device)
-
 
         # Cross-Entropy Loss
         cross_loss = F.cross_entropy(y_pred, torch.from_numpy(y_limited).long()) if not y_pred.numel() == 0 else torch.tensor(0)
@@ -271,6 +254,10 @@ def pretrain_ae(model):
 
 
 def train_EDESC(device, i):
+
+    # for whatever reason this function does not take global scope, so this is required for reproducability
+    setup_seed(42)
+
     model = C_EDESC(
         n_input=args.n_input,
         n_z=args.n_z,
@@ -288,8 +275,8 @@ def train_EDESC(device, i):
     c, num_clust, req_c1 = FINCH(data)
     req_c = c[:, args.hierarchy]
 
+    model.pretrain(f'original_weight/{args.dataset}.pkl')
     # model.pretrain('')
-    model.pretrain(f'weight/{args.dataset}.pkl')
     data = dataset.train
     optimizer = Adam(model.parameters(), lr=args.lr)
     index = dataset.index
@@ -300,8 +287,9 @@ def train_EDESC(device, i):
     label_pct = args.label_usage #0.01
 
     # TODO: chances are that not all classes are within the l_feats selection
-    # indices should always be the same since torch.random on both devices has been set
-    indices = torch.randperm(len(y))   # get random indices throughout the entire dataset
+    # get random indices throughout the entire dataset
+    indices = torch.randperm(len(y))
+    print(f'seed: {np.random.get_state()[1][0]}')
     train_size = int(label_pct*len(y)) # only use a percentage of all the indices
     train_indices = indices[:train_size]
 
@@ -311,9 +299,6 @@ def train_EDESC(device, i):
     # u_targets = y[~mask_lab]
     l_feats = data[mask_lab]
     l_targets = y[mask_lab]
-    old_classes = torch.unique(torch.from_numpy(y[train_indices])) # Get the unique classes from the labelled data (old classes)
-    old_classes = old_classes.tolist() # old classes are the classes that are discovered during training, however during inferencing there is uncertainty if new all classes have been seen
-    mask_cls = torch.tensor([label.item() in old_classes for label in y], dtype=torch.bool)
 
     random_seed = 42
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=30, random_state=random_seed)
@@ -321,7 +306,7 @@ def train_EDESC(device, i):
     print("Initial Cluster Centers: ", y_pred)
 
     kmeans = SemiSupKMeans(k=args.n_clusters, tolerance=1e-4, max_iterations=300, init='k-means++',
-                           n_init=100, random_state=random_seed, n_jobs=-1, pairwise_batch_size=1024,
+                           n_init=30, random_state=random_seed, n_jobs=-1, pairwise_batch_size=1024,
                            mode=None)
 
     u_feats = torch.tensor(u_feats, dtype=torch.float32)
@@ -347,12 +332,15 @@ def train_EDESC(device, i):
     # EVALUATE
     # -----------------------
 
-    all_acc, old_acc, new_acc = log_accs_from_preds(y_true=y, y_pred=all_preds, mask=mask_lab.numpy(),
-                                                    eval_funcs=['v1', 'v2'],
-                                                    save_name='SS-K-Means Train ACC Unlabelled', print_output=True)
-    print(accuracy_score(y_pred,all_preds), accuracy_score(all_preds,y_pred))
+    # all_acc, old_acc, new_acc = log_accs_from_preds(y_true=y, y_pred=all_preds, mask=mask_lab.numpy(),
+    #                                                 eval_funcs=['v1', 'v2'],
+    #                                                 save_name='SS-K-Means Train ACC Unlabelled', print_output=True)
+    print(f"kmeans: {accuracy_score(y_pred, y)}")
+    print(f"sskmeans unlabelled: {accuracy_score(all_preds[~mask_lab], y[~mask_lab])}")
+    print(f"sskmeans labelled: {accuracy_score(all_preds[mask_lab], y[mask_lab])}")
+    print(f"sskmeans both: {accuracy_score(all_preds, y)}")
 
-
+    y_pred = all_preds # transition to ss-k-means
 
     # Initialize D
     D = Initialization_D(hidden.reshape(dataset.__len__(), -1), y_pred, args.n_clusters, args.d)
@@ -367,7 +355,6 @@ def train_EDESC(device, i):
     model.train()
     from torch_scatter import scatter_mean
     max_ratio = 0
-
 
     for epoch in range(epochs):
 
@@ -452,6 +439,8 @@ if __name__ == "__main__":
     now = datetime.datetime.now()
     print("hello world: " + str(now))
 
+    pseudo_miss = 0
+
     parser = argparse.ArgumentParser(
         description='EDESC training',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -472,7 +461,7 @@ if __name__ == "__main__":
     parser.add_argument('--beta', default=8, type=float, help='the weight of local_loss')
     parser.add_argument('--gama', default=0.03, type=float, help='the weight of non_local_loss')
     parser.add_argument('--delta', default=.0, type=float, help='the weight of the cross_entropy_loss')
-    parser.add_argument('--label_usage', default=.01, type=float, help='decimal deciding how much labeled data to be used during training')
+    parser.add_argument('--label_usage', default=.05, type=float, help='decimal deciding how much labeled data to be used during training')
     parser.add_argument('--epsilon', default=.0, type=float, help='the weight of the pseudo_label_loss')
     parser.add_argument('--pseudo_threshold', default=.8, type=float, help='minimum confidence of the pseudo predications to be used')
 
@@ -523,7 +512,7 @@ if __name__ == "__main__":
     acc_sum = 0
     nmi_sum = 0
     kappa_sum = 0
-    rounds = 10
+    rounds = 1
     cas = []
     for i in range(rounds):
         print("this is " + str(i) + "round")
@@ -548,3 +537,4 @@ if __name__ == "__main__":
     print("average_nmi:", average_nmi)
     print("average_kappa", average_kappa)
     print('Best ACC {:.4f}'.format(bestacc), ' Best NMI {:4f}'.format(bestnmi), ' Best kappa {:4f}'.format(kappa))
+    print(f'Pseudo classifier missed threshold {args.pseudo_threshold} {pseudo_miss if args.epsilon != .0 else 0} out of {epochs if args.epsilon != .0 else 0} times')

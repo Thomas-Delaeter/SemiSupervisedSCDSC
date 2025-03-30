@@ -13,7 +13,7 @@ mkdir -p "${OUTPUT_SUBDIR}"
 # fixed parameter
 lr=0.0001
 smooth_window_size=3
-pre_train_iters=10
+pre_train_iters=70
 dataset='Houston'
 device_index=0
 lnp=20
