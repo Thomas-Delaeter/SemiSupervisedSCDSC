@@ -10,6 +10,7 @@ from torch.nn.parameter import Parameter
 from torch.optim import Adam
 from torch.utils.data import DataLoader
 
+from attention_span_classifier import AttentionPseudoClassifier
 from my_knn import get_initial_value
 from Auto_encoder import Ae
 from getdata import Load_my_Dataset
@@ -37,11 +38,6 @@ def setup_seed(seed):
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
 
-
-# 设置随机数种子
-# setup_seed(42)
-
-
 def setDir(filepath):
     '''
     如果文件夹不存在就创建，如果文件存在就清空！
@@ -56,10 +52,8 @@ def setDir(filepath):
         os.listdir(filepath)
         print(os.listdir(filepath))
 
-
 warnings.filterwarnings("ignore")
 epochs = 400
-
 
 class C_EDESC(nn.Module):
     def __init__(self,
@@ -80,9 +74,8 @@ class C_EDESC(nn.Module):
         nn.init.xavier_uniform_(self.D) # stable inplace init of D
         print(self.D.shape)
 
-        # Pseudo-Graph Module
-        # TODO: batch_size
-        # Makes it O(n**2) again, so best to avoid?
+        # TODO: Pseudo-Graph Module, requires mini-batch integration
+        # Makes it O(n**2) again, so best to avoid? Though FINCH is 0(n**2) as wel
         # proposed method uses small set of samples to train network
         # Not end to end trainable anymore
         # self.Coef = Parameter(torch.Tensor(batch_size,batch_size))
@@ -90,7 +83,21 @@ class C_EDESC(nn.Module):
 
         # Pseudo-Label Module
         latent_dim = n_z * 7 * 7
-        self.pseudo_classifier = nn.Linear(latent_dim, n_clusters)
+        # self.pseudo_classifier = nn.Linear(latent_dim, n_clusters)
+        # Is this too complex already? latent sample is (n_z, 7, 7)
+        self.pseudo_classifier = nn.Sequential(
+            nn.Conv2d(n_z, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            # nn.Dropout(p=0.3),
+            nn.Conv2d(64, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d(1),
+            nn.Flatten(),
+            nn.Linear(32, n_clusters)
+        )
+        # self.pseudo_classifier = AttentionPseudoClassifier(n_z, n_clusters)
 
     def pretrain(self, path=''):
         if path == '':
@@ -102,6 +109,11 @@ class C_EDESC(nn.Module):
 
     def forward(self, x):
         x_bar, z = self.ae(x)
+
+        # Pseudo Label
+        # pseudo_logits = self.pseudo_classifier(z.detach())
+        pseudo_logits = self.pseudo_classifier(z)
+
         z_shape = z.shape
         num_ = z_shape[0]
         z = z.reshape((num_, -1))
@@ -118,9 +130,6 @@ class C_EDESC(nn.Module):
                 s = torch.cat((s, si), 1)
         s = (s + eta * d) / ((eta + 1) * d)
         s = (s.t() / torch.sum(s, 1)).t()
-
-        # Pseudo Label
-        pseudo_logits = self.pseudo_classifier(z)
 
         return x_bar, s, z, pseudo_logits
 
@@ -165,9 +174,12 @@ class C_EDESC(nn.Module):
 
         return total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2, cross_loss
 
-    def total_loss_semi_pseudo(self, x, x_bar, center, target, dim, n_clusters, s, index, y, y_limited, y_pred, pseudo_logits):
+    def total_loss_semi_pseudo(self, x, x_bar, center, target, dim, n_clusters, s, index, y, y_partial, y_pred, pseudo_logits):
+
         # Reconstruction loss
         reconstr_loss = F.mse_loss(x_bar, x)
+
+        # mini-cluster loss / non-local structure
         kl_loss = F.kl_div(center.log(), target.data)
 
         # Constraints
@@ -176,30 +188,70 @@ class C_EDESC(nn.Module):
         loss_d1 = d_cons1(self.D)
         loss_d2 = d_cons2(self.D, dim, n_clusters)
 
+        # local-structure preservation
         location = torch.tensor(index, device=device).T
         smooth_pred = spatial_filter(s, location, args.image_size)
         loss_smooth = F.kl_div(s.log(), smooth_pred.data)
 
-        # Pseudo Label Loss
-        # Samples with high confidence (e.g. max probability > 0.8, like PSSC framework)
-        max_probs, _ = torch.max(F.softmax(pseudo_logits, dim=1), dim=1)
-        confident_mask = (max_probs > args.pseudo_threshold)
-        if confident_mask.sum() > 0 and y is not None:
-            pseudo_loss = F.cross_entropy(pseudo_logits[confident_mask], torch.from_numpy(y[confident_mask.cpu().numpy()]).long().to(device))
-        else:
-            if args.epsilon != .0:
-                print("no pseudo labels were valuable enough to contribute")
-            global pseudo_miss #TODO: prettify this because global variables arent really clean code
-            pseudo_miss+=1
-            pseudo_loss = torch.tensor(0.0, device=device)
-
         # Cross-Entropy Loss
-        cross_loss = F.cross_entropy(y_pred, torch.from_numpy(y_limited).long()) if not y_pred.numel() == 0 else torch.tensor(0)
+        # TODO: i think y_pred is already softmaxed, though pytorch will do it again for numerical stability
+        cross_loss = F.cross_entropy(y_pred,
+                                     torch.from_numpy(y_partial).long()) if not y_pred.numel() == 0 else torch.tensor(0)
 
-        total_loss = reconstr_loss + loss_d1 + loss_d2 + args.alpha * kl_loss + args.beta * loss_smooth+ args.delta * cross_loss + args.epsilon * pseudo_loss
+        #Pseudo Label Loss
+        pseudo_loss = torch.tensor(0.0, device=device)
+        if args.epsilon != .0:
+            print(f"Pseudo accuracy was {accuracy_score(torch.argmax(pseudo_logits.cpu(), dim=1), y)}")
 
+            # Samples with high confidence (e.g. max probability > 0.8 (args.pseudo_threshold), like PSSC framework)
+            pseudo_probs = F.softmax(pseudo_logits, dim=1)
+            max_probs, pseudo_labels = torch.max(pseudo_probs, dim=1)
+            confident_mask = (max_probs > args.pseudo_threshold)
+
+            pseudo_loss = F.cross_entropy(pseudo_logits, pseudo_labels, reduction='none')
+            pseudo_loss = (pseudo_loss * confident_mask).mean()
+
+            total_loss = reconstr_loss + loss_d1 + loss_d2 + args.alpha * kl_loss + args.beta * loss_smooth + args.delta * cross_loss + args.epsilon * pseudo_loss
+
+            if confident_mask.sum() <= 0:
+                print(f"no pseudo labels were valuable enough to contribute")
+                global pseudo_miss #TODO: prettify this because global variables arent really clean code
+                pseudo_miss+=1
+
+                total_loss = reconstr_loss + loss_d1 + loss_d2 + args.alpha * kl_loss + args.beta * loss_smooth + args.delta * cross_loss
+                # TODO: can I still do something for the pseudo_loss even if threshold is never met
+                # ???pseudo_loss = F.cross_entropy(pseudo_logits, torch.from_numpy(y).long().to(device))
 
         return total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2, cross_loss, pseudo_loss
+    def pseudo_loss(self, y, pseudo_logits):
+        # Pseudo Label Loss
+        pseudo_loss = torch.tensor(0.0, device=device)
+        if args.epsilon != .0:
+            print(f"Pseudo accuracy was {accuracy_score(torch.argmax(pseudo_logits.cpu(), dim=1), y)}")
+
+            # Samples with high confidence (e.g. max probability > 0.8 (args.pseudo_threshold), like PSSC framework)
+            pseudo_probs = F.softmax(pseudo_logits, dim=1)
+            max_probs, pseudo_labels = torch.max(pseudo_probs, dim=1)
+            confident_mask = (max_probs > args.pseudo_threshold)
+
+            pseudo_loss = F.cross_entropy(pseudo_logits, pseudo_labels, reduction='none')
+            pseudo_loss = (pseudo_loss * confident_mask).mean()
+
+            if confident_mask.sum() <= 0:
+                print(f"no pseudo labels were valuable enough to contribute")
+                global pseudo_miss  # TODO: prettify this because global variables arent really clean code
+                pseudo_miss += 1
+
+                # TODO: can I still do something for the pseudo_loss even if threshold is never met
+                # ???pseudo_loss = F.cross_entropy(pseudo_logits, torch.from_numpy(y).long().to(device))
+
+        return pseudo_loss
+    def cross_loss(self, y_pred, y):
+
+        # TODO: i think y_pred is already softmaxed, though pytorch will do it again for numerical stability
+        cross_loss = F.cross_entropy(y_pred,
+                                 torch.from_numpy(y).long()) if not y_pred.numel() == 0 else torch.tensor(0)
+        return cross_loss
 
 def spatial_filter(data_matrix, location, image_size):
     data_matrix = data_matrix.reshape([data_matrix.shape[0], -1])
@@ -242,7 +294,7 @@ def pretrain_ae(model):
             x = x.to(device)
             optimizer.zero_grad()
             x_bar, z = model(x)
-            loss = F.mse_loss(x_bar, x) #+ F.cross_entropy()
+            loss = F.mse_loss(x_bar, x)
             total_loss += loss.item()
             loss.backward()
             optimizer.step()
@@ -269,22 +321,25 @@ def train_EDESC(device, i):
     data = data.astype(np.float16)
     y = dataset.y
 
-    # utilze finch to generate big groups
+    # utilize finch to generate big groups
     from finch import FINCH
     data = data.reshape(data.shape[0], -1)
     c, num_clust, req_c1 = FINCH(data)
     req_c = c[:, args.hierarchy]
 
     model.pretrain(f'original_weight/{args.dataset}.pkl')
-    # model.pretrain('')
+    # model.pretrain('') # empty path will pretrain again
     data = dataset.train
+
     optimizer = Adam(model.parameters(), lr=args.lr)
+    #TODO: technically the pseudo optimizer should exclude the loss from the auto-encoder
+    optimizer_pseudo = Adam(model.pseudo_classifier.parameters(), lr=args.lr)
     index = dataset.index
     data = torch.Tensor(data).to(device)
     x_bar, hidden = get_initial_value(model, data)
 
-    #passed as decimal number
-    label_pct = args.label_usage #0.01
+    #passed as decimal number: 0.01 = 1% labeled data used
+    label_pct = args.label_usage
 
     # TODO: chances are that not all classes are within the l_feats selection
     # get random indices throughout the entire dataset
@@ -318,29 +373,14 @@ def train_EDESC(device, i):
     kmeans.fit_mix(u_feats, l_feats, l_targets)
     all_preds = kmeans.labels_.cpu().numpy()
 
-    # -----------------------
-    # EVALUATE
-    # -----------------------
-    # Get preds corresponding to unlabelled set
-    # preds = all_preds[~mask_lab]
-
-    # Get portion of mask_cls which corresponds to the unlabelled set
-    # mask = mask_cls[~mask_lab].numpy()
-    # mask = mask.astype(bool)
-
-    # -----------------------
-    # EVALUATE
-    # -----------------------
-
-    # all_acc, old_acc, new_acc = log_accs_from_preds(y_true=y, y_pred=all_preds, mask=mask_lab.numpy(),
-    #                                                 eval_funcs=['v1', 'v2'],
-    #                                                 save_name='SS-K-Means Train ACC Unlabelled', print_output=True)
     print(f"kmeans: {accuracy_score(y_pred, y)}")
     print(f"sskmeans unlabelled: {accuracy_score(all_preds[~mask_lab], y[~mask_lab])}")
     print(f"sskmeans labelled: {accuracy_score(all_preds[mask_lab], y[mask_lab])}")
     print(f"sskmeans both: {accuracy_score(all_preds, y)}")
 
-    y_pred = all_preds # transition to ss-k-means
+    # transition to ss-k-means
+    # TODO: ss-k-means does not increase performance at all??!
+    # y_pred = all_preds
 
     # Initialize D
     D = Initialization_D(hidden.reshape(dataset.__len__(), -1), y_pred, args.n_clusters, args.d)
@@ -367,7 +407,7 @@ def train_EDESC(device, i):
         refined_center = refined_subspace_affinity(original_center)
 
         y_pred = s.cpu().detach().numpy().argmax(1)
-        y_best, acc, kappa, nmi, ca, mapping = cluster_accuracy(y, y_pred, return_aligned=True)
+        y_pred_remap, acc, kappa, nmi, ca, mapping = cluster_accuracy(y, y_pred, return_aligned=True)
 
         if ratio > max_ratio:
             accmax = acc
@@ -377,54 +417,88 @@ def train_EDESC(device, i):
             max_ratio = ratio
 
 
-        # since y_best is a remap, we add the mapping to the logits.
-        logits = s.cpu()#.detach().numpy() #is detaching allowed?
+        # since we need y_pred_remap, we need to apply the same to the logits for cross_entropy
+        logits = s.cpu()#.detach().numpy() #is detaching allowed/necessary?
 
+        # Create permutation index array to remap the logits
         num_classes = logits.size(1)
-        # Create permutation index array
         perm = [0] * num_classes
         for old_index, new_index in mapping.items():
             perm[new_index] = old_index
 
         # Convert to tensor and ensure it's on the same device as logits
         perm = torch.tensor(perm, dtype=torch.long, device=logits.device)
-
         # Apply permutation to logits
-        y_best_logits = logits[:, perm]
+        y_pred_logits_remap = logits[:, perm]
 
         # Train test splitting as an arbitrary way of limiting data
-        y_best_logits_limited = y_best_logits[train_indices]
-        y_limited = y[train_indices]
+        y_pred_logits_remap_partial = y_pred_logits_remap[train_indices]
+        y_partial = y[train_indices]
 
-        total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2, entropy_loss, pseudo_loss = model.total_loss_semi_pseudo(
-                                                                                    x=data,
-                                                                                    x_bar=x_bar,
-                                                                                    center=original_center,
-                                                                                    target=refined_center,
-                                                                                    dim=args.d,
-                                                                                    n_clusters=args.n_clusters,
-                                                                                    s=s,
-                                                                                    index=index,
-                                                                                    y = y,
-                                                                                    y_limited = y_limited,
-                                                                                    y_pred = y_best_logits_limited,
-                                                                                    pseudo_logits=pseudo_logits
-                                                                                    )
+        # total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2, entropy_loss, pseudo_loss = model.total_loss_semi_pseudo(
+        #                                                                             x=data,
+        #                                                                             x_bar=x_bar,
+        #                                                                             center=original_center,
+        #                                                                             target=refined_center,
+        #                                                                             dim=args.d,
+        #                                                                             n_clusters=args.n_clusters,
+        #                                                                             s=s,
+        #                                                                             index=index,
+        #                                                                             y = y,
+        #                                                                             y_partial = y_partial,
+        #                                                                             y_pred = y_pred_logits_remap_partial,
+        #                                                                             pseudo_logits=pseudo_logits
+        #                                                                             )
+
+        total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2 = model.total_loss(
+            x=data,
+            x_bar=x_bar,
+            center=original_center,
+            target=refined_center,
+            dim=args.d,
+            n_clusters=args.n_clusters,
+            s=s,
+            index=index
+        )
+
+        cross_loss = model.cross_loss(y_pred_logits_remap_partial,y_partial)
+        pseudo_loss = model.pseudo_loss(pseudo_logits)
+
+        total_loss = total_loss + args.delta * cross_loss + args.epsilon * pseudo_loss
+
+
+
+        # # if pseudo module surpasses threshold then it is already integrated into the total loss, otherwise train itself
+        # # TODO: shouldnt this also apply on the autoenc? because it extracts from z_i, but it just is able to recognize from a bad Z, while we want a good Z
+        # if pseudo_loss.data != 0.0 and epoch < 160:
+        #
+        #     optimizer_pseudo.zero_grad()
+        #     # i guess you can fuse pseudo and cross_entropy if you wanna include labeled data to guide the model better?
+        #     pseudo_loss.backward(retain_graph=True)
+        #     optimizer_pseudo.step()
+        #
+        #     total_loss = total_loss + pseudo_loss
+        #
+
+        # warming with supervision
+        # if epoch < 50:
+        #     total_loss = total_loss + entropy_loss
 
         optimizer.zero_grad()
         total_loss.backward()
         optimizer.step()
+
         if epoch % 10 == 0 or epoch == epochs - 1:
             print('Iter {}'.format(epoch), ':Current Acc {:.4f}'.format(acc),
                   ':Max Acc {:.4f}'.format(accmax), ', Current nmi {:.4f}'.format(nmi),
                   ':Max nmi {:.4f}'.format(nmimax), ', Current kappa {:.4f}'.format(kappa),
                   ':Max kappa {:.4f}'.format(kappa_max))
-            print("total_loss", total_loss.data, "reconstr_loss", reconstr_loss.data, "kl_loss", kl_loss.data, "entropy_loss", entropy_loss.data, "pseudo_loss", pseudo_loss.data)
+            print("total_loss", total_loss.data, "reconstr_loss", reconstr_loss.data, "kl_loss", kl_loss.data, "entropy_loss", cross_loss.data, "pseudo_loss", pseudo_loss.data)
             print(ratio)
 
     end = time.time()
     print('Running time: ', end - start)
-    print(f"percentage of labeled data used: {label_pct} meaning {len(y_best_logits_limited)}/{len(y)} used")
+    print(f"percentage of labeled data used: {label_pct} meaning {len(y_pred_logits_remap_partial)}/{len(y)} used")
     return accmax, nmimax, kappa_max, ca_max
 
 
@@ -432,6 +506,7 @@ def train_EDESC(device, i):
 
 if __name__ == "__main__":
     import datetime
+    torch.autograd.set_detect_anomaly(True)
 
     # Making sure seed has been set
     setup_seed(42)
@@ -454,16 +529,16 @@ if __name__ == "__main__":
     parser.add_argument('--hierarchy', default=1, type=int)
     parser.add_argument('--n_z', default=32, type=int)
     parser.add_argument('--eta', default=5, type=int)
-    parser.add_argument('--dataset', type=str, default='trento')
+    parser.add_argument('--dataset', type=str, default='Houston')
     parser.add_argument('--device_index', type=int, default=0)
     parser.add_argument('--pretrain_path', type=str, default='./tmp/flood/pre.pkl')
     parser.add_argument('--alpha', default=3, type=float, help='the weight of kl_loss')
     parser.add_argument('--beta', default=8, type=float, help='the weight of local_loss')
     parser.add_argument('--gama', default=0.03, type=float, help='the weight of non_local_loss')
     parser.add_argument('--delta', default=.0, type=float, help='the weight of the cross_entropy_loss')
-    parser.add_argument('--label_usage', default=.05, type=float, help='decimal deciding how much labeled data to be used during training')
-    parser.add_argument('--epsilon', default=.0, type=float, help='the weight of the pseudo_label_loss')
-    parser.add_argument('--pseudo_threshold', default=.8, type=float, help='minimum confidence of the pseudo predications to be used')
+    parser.add_argument('--label_usage', default=.01, type=float, help='decimal deciding how much labeled data to be used during training')
+    parser.add_argument('--epsilon', default=1, type=float, help='the weight of the pseudo_label_loss')
+    parser.add_argument('--pseudo_threshold', default=.6, type=float, help='minimum confidence of the pseudo predications to be used')
 
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
