@@ -38,6 +38,29 @@ def setup_seed(seed):
     random.seed(seed)
     torch.backends.cudnn.deterministic = True
 
+def compute_ece(probs, labels, n_bins=10):
+    probs = np.array(probs)
+    labels = np.array(labels).flatten()  # ensure it's 1D
+
+    confidences = np.max(probs, axis=1)
+    predictions = np.argmax(probs, axis=1)
+    accuracies = predictions == labels  # elementwise boolean array
+
+    bin_boundaries = np.linspace(0, 1, n_bins + 1)
+    ece = 0.0
+
+    for i in range(n_bins):
+        bin_lower = bin_boundaries[i]
+        bin_upper = bin_boundaries[i + 1]
+        in_bin = (confidences > bin_lower) & (confidences <= bin_upper)
+
+        if np.any(in_bin):
+            bin_accuracy = np.mean(accuracies[in_bin])
+            bin_confidence = np.mean(confidences[in_bin])
+            ece += (np.sum(in_bin) / len(probs)) * np.abs(bin_accuracy - bin_confidence)
+
+    return ece
+
 def setDir(filepath):
     '''
     如果文件夹不存在就创建，如果文件存在就清空！
@@ -111,8 +134,9 @@ class C_EDESC(nn.Module):
         x_bar, z = self.ae(x)
 
         # Pseudo Label
-        # pseudo_logits = self.pseudo_classifier(z.detach())
-        pseudo_logits = self.pseudo_classifier(z)
+        pseudo_logits = self.pseudo_classifier(
+            z#.detach()
+        )
 
         z_shape = z.shape
         num_ = z_shape[0]
@@ -151,104 +175,177 @@ class C_EDESC(nn.Module):
 
         return total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2
 
-    def total_loss_semi(self, x, x_bar, center, target, dim, n_clusters, s, index, y, y_pred):
-        # Reconstruction loss
-        reconstr_loss = F.mse_loss(x_bar, x)
-        kl_loss = F.kl_div(center.log(), target.data)
-        # Constraints
-        d_cons1 = D_constraint1()
-        d_cons2 = D_constraint2()
-        loss_d1 = d_cons1(self.D)
-        loss_d2 = d_cons2(self.D, dim, n_clusters)
-
-        location = torch.tensor(index, device=device).T
-        smooth_pred = spatial_filter(s, location, args.image_size)
-        loss_smooth = F.kl_div(s.log(), smooth_pred.data)
-
-
-        # crossentropy
-        cross_loss = F.cross_entropy(y_pred, torch.from_numpy(y).long()) if not y_pred.numel() == 0 else torch.tensor(0)
-
-        total_loss = reconstr_loss + loss_d1 + loss_d2 + args.alpha * kl_loss + args.beta * loss_smooth + cross_loss
-
-
-        return total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2, cross_loss
-
-    def total_loss_semi_pseudo(self, x, x_bar, center, target, dim, n_clusters, s, index, y, y_partial, y_pred, pseudo_logits):
-
-        # Reconstruction loss
-        reconstr_loss = F.mse_loss(x_bar, x)
-
-        # mini-cluster loss / non-local structure
-        kl_loss = F.kl_div(center.log(), target.data)
-
-        # Constraints
-        d_cons1 = D_constraint1()
-        d_cons2 = D_constraint2()
-        loss_d1 = d_cons1(self.D)
-        loss_d2 = d_cons2(self.D, dim, n_clusters)
-
-        # local-structure preservation
-        location = torch.tensor(index, device=device).T
-        smooth_pred = spatial_filter(s, location, args.image_size)
-        loss_smooth = F.kl_div(s.log(), smooth_pred.data)
-
-        # Cross-Entropy Loss
-        # TODO: i think y_pred is already softmaxed, though pytorch will do it again for numerical stability
-        cross_loss = F.cross_entropy(y_pred,
-                                     torch.from_numpy(y_partial).long()) if not y_pred.numel() == 0 else torch.tensor(0)
-
-        #Pseudo Label Loss
-        pseudo_loss = torch.tensor(0.0, device=device)
-        if args.epsilon != .0:
-            print(f"Pseudo accuracy was {accuracy_score(torch.argmax(pseudo_logits.cpu(), dim=1), y)}")
-
-            # Samples with high confidence (e.g. max probability > 0.8 (args.pseudo_threshold), like PSSC framework)
-            pseudo_probs = F.softmax(pseudo_logits, dim=1)
-            max_probs, pseudo_labels = torch.max(pseudo_probs, dim=1)
-            confident_mask = (max_probs > args.pseudo_threshold)
-
-            pseudo_loss = F.cross_entropy(pseudo_logits, pseudo_labels, reduction='none')
-            pseudo_loss = (pseudo_loss * confident_mask).mean()
-
-            total_loss = reconstr_loss + loss_d1 + loss_d2 + args.alpha * kl_loss + args.beta * loss_smooth + args.delta * cross_loss + args.epsilon * pseudo_loss
-
-            if confident_mask.sum() <= 0:
-                print(f"no pseudo labels were valuable enough to contribute")
-                global pseudo_miss #TODO: prettify this because global variables arent really clean code
-                pseudo_miss+=1
-
-                total_loss = reconstr_loss + loss_d1 + loss_d2 + args.alpha * kl_loss + args.beta * loss_smooth + args.delta * cross_loss
-                # TODO: can I still do something for the pseudo_loss even if threshold is never met
-                # ???pseudo_loss = F.cross_entropy(pseudo_logits, torch.from_numpy(y).long().to(device))
-
-        return total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2, cross_loss, pseudo_loss
     def pseudo_loss(self, y, pseudo_logits):
-        # Pseudo Label Loss
+
         pseudo_loss = torch.tensor(0.0, device=device)
-        if args.epsilon != .0:
-            print(f"Pseudo accuracy was {accuracy_score(torch.argmax(pseudo_logits.cpu(), dim=1), y)}")
+        if args.epsilon == .0:
+            return pseudo_loss
 
-            # Samples with high confidence (e.g. max probability > 0.8 (args.pseudo_threshold), like PSSC framework)
-            pseudo_probs = F.softmax(pseudo_logits, dim=1)
-            max_probs, pseudo_labels = torch.max(pseudo_probs, dim=1)
-            confident_mask = (max_probs > args.pseudo_threshold)
 
-            pseudo_loss = F.cross_entropy(pseudo_logits, pseudo_labels, reduction='none')
-            pseudo_loss = (pseudo_loss * confident_mask).mean()
+        print(f"Pseudo accuracy was {accuracy_score(torch.argmax(pseudo_logits.cpu(), dim=1), y)}")
 
-            if confident_mask.sum() <= 0:
-                print(f"no pseudo labels were valuable enough to contribute")
-                global pseudo_miss  # TODO: prettify this because global variables arent really clean code
-                pseudo_miss += 1
+        # Samples with high confidence (e.g. max probability > 0.8 (args.pseudo_threshold), like PSSC framework)
+        pseudo_probs = F.softmax(pseudo_logits, dim=1)
+        max_probs, pseudo_labels = torch.max(pseudo_probs, dim=1)
+        confident_mask = (max_probs > args.pseudo_threshold)
 
-                # TODO: can I still do something for the pseudo_loss even if threshold is never met
-                # ???pseudo_loss = F.cross_entropy(pseudo_logits, torch.from_numpy(y).long().to(device))
+        pseudo_loss = F.cross_entropy(pseudo_logits, pseudo_labels, reduction='none')
+        pseudo_loss = (pseudo_loss * confident_mask).mean()
+
+        if confident_mask.sum() <= 0:
+            print(f"no pseudo labels were valuable enough to contribute, highest confidence was: {max_probs.max()}")
+            global pseudo_miss  # TODO: prettify this because global variables arent really clean code
+            pseudo_miss += 1
+
+            # TODO: can I still do something for the pseudo_loss even if threshold is never met
 
         return pseudo_loss
-    def cross_loss(self, y_pred, y):
 
-        # TODO: i think y_pred is already softmaxed, though pytorch will do it again for numerical stability
+    def pseudo_loss_adv(self, y, pseudo_logits):
+
+        pseudo_loss = torch.tensor(0.0, device=device)
+        if args.epsilon == .0:
+            return pseudo_loss
+
+
+        # print(f"Pseudo accuracy was {accuracy_score(torch.argmax(pseudo_logits.cpu(), dim=1), y)}")
+
+        pseudo_probs = F.softmax(pseudo_logits, dim=1)
+        max_probs, pseudo_labels = torch.max(pseudo_probs, dim=1)
+
+        print(f"ece score is: {compute_ece(pseudo_probs.detach().cpu().numpy(), y)}")
+        print(f"ece score is: {compute_ece(pseudo_probs.detach().cpu().numpy(), pseudo_labels.cpu())}")
+
+        # Option 1: Soft labeling with confidence weighting
+        if args.pseudo_mode == 'soft_weighted':
+            # Each sample contributes weighted by its confidence
+            targets = pseudo_probs.detach()  # detach to avoid gradient on targets
+            weights = max_probs.detach()
+            loss = F.kl_div(F.log_softmax(pseudo_logits, dim=1), targets, reduction='none').sum(dim=1)
+            pseudo_loss = (loss * weights).mean()
+
+        # Option 2: Require top-k probabilities to sum to threshold
+        elif args.pseudo_mode == 'topk_sum':
+            # DEFAULT
+            # topk_probs, _ = torch.topk(pseudo_probs, k=args.topk, dim=1)
+            # confident_mask = (topk_probs.sum(dim=1) > args.pseudo_threshold)
+            #
+            # targets = pseudo_probs.detach()
+            # loss = F.kl_div(F.log_softmax(pseudo_logits, dim=1), targets, reduction='none').sum(dim=1)
+            #
+            # if confident_mask.any():
+            #     pseudo_loss = (loss * confident_mask).mean()
+            # else:
+            #     print(f"[Pseudo] No samples met top-{args.topk} threshold. Max sum: {topk_probs.sum(dim=1).max():.4f}")
+            #     global pseudo_miss
+            #     pseudo_miss += 1
+
+            # MASKING
+            # topk_probs, topk_indices = torch.topk(pseudo_probs, k=args.topk, dim=1)
+            # confident_mask = topk_probs.sum(dim=1) > args.pseudo_threshold
+            #
+            # # Create masked + renormalized targets
+            # masked_targets = torch.zeros_like(pseudo_probs)
+            # masked_targets.scatter_(1, topk_indices, topk_probs)  # keep top-k values
+            # masked_targets = masked_targets / masked_targets.sum(dim=1, keepdim=True)  # normalize
+            #
+            # # Compute KL loss (only for confident samples)
+            # student_log_probs = F.log_softmax(pseudo_logits, dim=1)
+            # loss_per_sample = F.kl_div(student_log_probs, masked_targets.detach(), reduction='none').sum(dim=1)
+            #
+            # if confident_mask.any():
+            #     pseudo_loss = (loss_per_sample * confident_mask).mean()
+            # else:
+            #     pseudo_loss = torch.tensor(0.0, device=pseudo_logits.device)
+            #     print(f"[Pseudo] No samples met top-{args.topk} threshold. Max sum: {topk_probs.sum(dim=1).max():.4f}")
+            #     global pseudo_miss
+            #     pseudo_miss += 1
+
+            # BOOSTING
+            topk_probs, topk_indices = torch.topk(pseudo_probs, k=args.topk, dim=1)
+            confident_mask = topk_probs.sum(dim=1) > args.pseudo_threshold
+
+            # Boost top-k probs
+            boost_factor = 2.0  # You can tune this
+            boosted_targets = pseudo_probs.clone()
+            boosted_targets.scatter_(
+                1,
+                topk_indices,
+                pseudo_probs.gather(1, topk_indices) * boost_factor
+            )
+            boosted_targets = boosted_targets / boosted_targets.sum(dim=1, keepdim=True)
+
+            # Compute KL loss
+            student_log_probs = F.log_softmax(pseudo_logits, dim=1)
+            loss_per_sample = F.kl_div(student_log_probs, boosted_targets.detach(), reduction='none').sum(dim=1)
+
+            if confident_mask.any():
+                pseudo_loss = (loss_per_sample * confident_mask).mean()
+            else:
+                pseudo_loss = torch.tensor(0.0, device=pseudo_logits.device)
+                print(f"[Pseudo] No samples met top-{args.topk} threshold. Max sum: {topk_probs.sum(dim=1).max():.4f}")
+                global pseudo_miss
+                pseudo_miss += 1
+
+        else:
+            raise ValueError(f"Unknown pseudo_mode: {args.pseudo_mode}")
+
+        acc = accuracy_score(torch.argmax(pseudo_logits.detach().cpu(), dim=1), y)
+        print(f"[Pseudo] Mode: {args.pseudo_mode} | Pseudo acc: {acc:.4f} | Loss: {pseudo_loss.item():.4f}")
+
+        return pseudo_loss
+
+    def pseudo_loss_adv2(self, y, pseudo_logits):
+        # TODO: un softmax-ify this function
+        pseudo_loss = torch.tensor(0.0, device=device)
+        if args.epsilon == 0.0:
+            return pseudo_loss
+
+        use_temperature_scaling = True
+        temperature = 1.5  # You can tune this or set via args
+
+        # Temperature scaling
+        if use_temperature_scaling:
+            pseudo_logits = torch.log(pseudo_logits + 1e-8) if pseudo_logits.max() <= 1.0 else pseudo_logits
+            pseudo_probs = F.softmax(pseudo_logits / temperature, dim=1)
+        else:
+            pseudo_probs = F.softmax(pseudo_logits, dim=1)
+
+        max_probs, pseudo_labels = torch.max(pseudo_probs, dim=1)
+
+        topk_probs, topk_indices = torch.topk(pseudo_probs, k=args.topk, dim=1)
+        confident_mask = (topk_probs.sum(dim=1) > args.pseudo_threshold)
+
+        # Reweight top-k probs
+        boosted_targets = pseudo_probs.clone()
+        boosted_targets.scatter_(1, topk_indices, topk_probs * 2.0)  # Boost top-k by 2x
+        boosted_targets = boosted_targets / boosted_targets.sum(dim=1, keepdim=True)
+
+        loss_per_sample = F.kl_div(F.log_softmax(pseudo_logits, dim=1), boosted_targets.detach(),
+                                   reduction='none').sum(dim=1)
+
+        if confident_mask.any():
+            pseudo_loss = (loss_per_sample * confident_mask).mean()
+        else:
+            print(f"[Pseudo] No samples met top-{args.topk} threshold. Max sum: {topk_probs.sum(dim=1).max():.4f}")
+            global pseudo_miss
+            pseudo_miss += 1
+
+        # ece logging
+        if not hasattr(self, '_ece_call_count'):
+            self._ece_call_count = 0
+        self._ece_call_count += 1
+
+        if self._ece_call_count % 10 == 0:
+            print(f"ECE vs true: {compute_ece(pseudo_probs.detach().cpu().numpy(), y)}")
+            print(f"ECE vs argmax: {compute_ece(pseudo_probs.detach().cpu().numpy(), pseudo_labels.cpu())}")
+
+            acc = accuracy_score(torch.argmax(pseudo_probs.detach().cpu(), dim=1), y)
+            print(f"[Pseudo] Mode: {args.pseudo_mode} | Acc: {acc:.4f} | Loss: {pseudo_loss.item():.4f}")
+
+        return pseudo_loss
+
+    def cross_loss(self, y_pred, y):
         cross_loss = F.cross_entropy(y_pred,
                                  torch.from_numpy(y).long()) if not y_pred.numel() == 0 else torch.tensor(0)
         return cross_loss
@@ -303,7 +400,10 @@ def pretrain_ae(model):
         torch.save(model.state_dict(), args.pretrain_path)
     print("Model saved to {}.".format(args.pretrain_path))
 
-
+def train_one_epoch_fixmatch(X, train_size):
+    # TODO: - future work - from consistency_regularization.py use a weak and strong augmentation,
+    #  force the same pseudo and use strong augementation result as loss
+    pass
 
 def train_EDESC(device, i):
 
@@ -378,8 +478,7 @@ def train_EDESC(device, i):
     print(f"sskmeans labelled: {accuracy_score(all_preds[mask_lab], y[mask_lab])}")
     print(f"sskmeans both: {accuracy_score(all_preds, y)}")
 
-    # transition to ss-k-means
-    # TODO: ss-k-means does not increase performance at all??!
+    # TODO: ss-k-means does not increase performance at all, further more it is also inconsistent in being better...
     # y_pred = all_preds
 
     # Initialize D
@@ -396,7 +495,7 @@ def train_EDESC(device, i):
     from torch_scatter import scatter_mean
     max_ratio = 0
 
-    for epoch in range(epochs):
+    for epoch_iter in range(epochs):
 
         x_bar, s, z, pseudo_logits = model(data)
 
@@ -409,7 +508,8 @@ def train_EDESC(device, i):
         y_pred = s.cpu().detach().numpy().argmax(1)
         y_pred_remap, acc, kappa, nmi, ca, mapping = cluster_accuracy(y, y_pred, return_aligned=True)
 
-        if ratio > max_ratio:
+        # originally this was just ration> max_ratio
+        if ratio > max_ratio or acc > accmax:
             accmax = acc
             kappa_max = kappa
             nmimax = nmi
@@ -417,7 +517,7 @@ def train_EDESC(device, i):
             max_ratio = ratio
 
 
-        # since we need y_pred_remap, we need to apply the same to the logits for cross_entropy
+        # for cross_entropy we need the logits of y_pred_remap so applying the mapping dict
         logits = s.cpu()#.detach().numpy() #is detaching allowed/necessary?
 
         # Create permutation index array to remap the logits
@@ -435,21 +535,6 @@ def train_EDESC(device, i):
         y_pred_logits_remap_partial = y_pred_logits_remap[train_indices]
         y_partial = y[train_indices]
 
-        # total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2, entropy_loss, pseudo_loss = model.total_loss_semi_pseudo(
-        #                                                                             x=data,
-        #                                                                             x_bar=x_bar,
-        #                                                                             center=original_center,
-        #                                                                             target=refined_center,
-        #                                                                             dim=args.d,
-        #                                                                             n_clusters=args.n_clusters,
-        #                                                                             s=s,
-        #                                                                             index=index,
-        #                                                                             y = y,
-        #                                                                             y_partial = y_partial,
-        #                                                                             y_pred = y_pred_logits_remap_partial,
-        #                                                                             pseudo_logits=pseudo_logits
-        #                                                                             )
-
         total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2 = model.total_loss(
             x=data,
             x_bar=x_bar,
@@ -462,34 +547,22 @@ def train_EDESC(device, i):
         )
 
         cross_loss = model.cross_loss(y_pred_logits_remap_partial,y_partial)
-        pseudo_loss = model.pseudo_loss(pseudo_logits)
+
+        # dont forget to apply the permutation here because the latent dim. and actual labels dont necessarily match
+        pseudo_loss = model.pseudo_loss_adv2(
+            y,
+            # pseudo_logits[:, perm]
+            s[:, perm]
+        )
 
         total_loss = total_loss + args.delta * cross_loss + args.epsilon * pseudo_loss
-
-
-
-        # # if pseudo module surpasses threshold then it is already integrated into the total loss, otherwise train itself
-        # # TODO: shouldnt this also apply on the autoenc? because it extracts from z_i, but it just is able to recognize from a bad Z, while we want a good Z
-        # if pseudo_loss.data != 0.0 and epoch < 160:
-        #
-        #     optimizer_pseudo.zero_grad()
-        #     # i guess you can fuse pseudo and cross_entropy if you wanna include labeled data to guide the model better?
-        #     pseudo_loss.backward(retain_graph=True)
-        #     optimizer_pseudo.step()
-        #
-        #     total_loss = total_loss + pseudo_loss
-        #
-
-        # warming with supervision
-        # if epoch < 50:
-        #     total_loss = total_loss + entropy_loss
 
         optimizer.zero_grad()
         total_loss.backward()
         optimizer.step()
 
-        if epoch % 10 == 0 or epoch == epochs - 1:
-            print('Iter {}'.format(epoch), ':Current Acc {:.4f}'.format(acc),
+        if epoch_iter % 10 == 0 or epoch_iter == epochs - 1:
+            print('Iter {}'.format(epoch_iter), ':Current Acc {:.4f}'.format(acc),
                   ':Max Acc {:.4f}'.format(accmax), ', Current nmi {:.4f}'.format(nmi),
                   ':Max nmi {:.4f}'.format(nmimax), ', Current kappa {:.4f}'.format(kappa),
                   ':Max kappa {:.4f}'.format(kappa_max))
@@ -538,7 +611,8 @@ if __name__ == "__main__":
     parser.add_argument('--delta', default=.0, type=float, help='the weight of the cross_entropy_loss')
     parser.add_argument('--label_usage', default=.01, type=float, help='decimal deciding how much labeled data to be used during training')
     parser.add_argument('--epsilon', default=1, type=float, help='the weight of the pseudo_label_loss')
-    parser.add_argument('--pseudo_threshold', default=.6, type=float, help='minimum confidence of the pseudo predications to be used')
+    parser.add_argument('--pseudo_threshold', default=.7, type=float, help='minimum confidence of the pseudo predications to be used')
+    parser.add_argument('--topk', default=2, type=int, help="count of pseudo labels to be summed for the threshold to be met")
 
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
