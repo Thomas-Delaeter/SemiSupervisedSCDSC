@@ -14,7 +14,7 @@ from attention_span_classifier import AttentionPseudoClassifier
 from my_knn import get_initial_value
 from Auto_encoder import Ae
 from getdata import Load_my_Dataset
-from utils import cluster_accuracy, ascii_histogram
+from utils import cluster_accuracy, ascii_histogram, get_labeled_data
 import warnings
 from Initialize_D import Initialization_D
 from Constraint import D_constraint1, D_constraint2
@@ -181,7 +181,6 @@ class C_EDESC(nn.Module):
         if args.epsilon == .0:
             return pseudo_loss
 
-
         print(f"Pseudo accuracy was {accuracy_score(torch.argmax(pseudo_logits.cpu(), dim=1), y)}")
 
         # Samples with high confidence (e.g. max probability > 0.8 (args.pseudo_threshold), like PSSC framework)
@@ -201,100 +200,6 @@ class C_EDESC(nn.Module):
 
         return pseudo_loss
 
-    def pseudo_loss_adv(self, y, pseudo_logits):
-
-        pseudo_loss = torch.tensor(0.0, device=device)
-        if args.epsilon == .0:
-            return pseudo_loss
-
-
-        # print(f"Pseudo accuracy was {accuracy_score(torch.argmax(pseudo_logits.cpu(), dim=1), y)}")
-
-        pseudo_probs = F.softmax(pseudo_logits, dim=1)
-        max_probs, pseudo_labels = torch.max(pseudo_probs, dim=1)
-
-        print(f"ece score is: {compute_ece(pseudo_probs.detach().cpu().numpy(), y)}")
-        print(f"ece score is: {compute_ece(pseudo_probs.detach().cpu().numpy(), pseudo_labels.cpu())}")
-
-        # Option 1: Soft labeling with confidence weighting
-        if args.pseudo_mode == 'soft_weighted':
-            # Each sample contributes weighted by its confidence
-            targets = pseudo_probs.detach()  # detach to avoid gradient on targets
-            weights = max_probs.detach()
-            loss = F.kl_div(F.log_softmax(pseudo_logits, dim=1), targets, reduction='none').sum(dim=1)
-            pseudo_loss = (loss * weights).mean()
-
-        # Option 2: Require top-k probabilities to sum to threshold
-        elif args.pseudo_mode == 'topk_sum':
-            # DEFAULT
-            # topk_probs, _ = torch.topk(pseudo_probs, k=args.topk, dim=1)
-            # confident_mask = (topk_probs.sum(dim=1) > args.pseudo_threshold)
-            #
-            # targets = pseudo_probs.detach()
-            # loss = F.kl_div(F.log_softmax(pseudo_logits, dim=1), targets, reduction='none').sum(dim=1)
-            #
-            # if confident_mask.any():
-            #     pseudo_loss = (loss * confident_mask).mean()
-            # else:
-            #     print(f"[Pseudo] No samples met top-{args.topk} threshold. Max sum: {topk_probs.sum(dim=1).max():.4f}")
-            #     global pseudo_miss
-            #     pseudo_miss += 1
-
-            # MASKING
-            # topk_probs, topk_indices = torch.topk(pseudo_probs, k=args.topk, dim=1)
-            # confident_mask = topk_probs.sum(dim=1) > args.pseudo_threshold
-            #
-            # # Create masked + renormalized targets
-            # masked_targets = torch.zeros_like(pseudo_probs)
-            # masked_targets.scatter_(1, topk_indices, topk_probs)  # keep top-k values
-            # masked_targets = masked_targets / masked_targets.sum(dim=1, keepdim=True)  # normalize
-            #
-            # # Compute KL loss (only for confident samples)
-            # student_log_probs = F.log_softmax(pseudo_logits, dim=1)
-            # loss_per_sample = F.kl_div(student_log_probs, masked_targets.detach(), reduction='none').sum(dim=1)
-            #
-            # if confident_mask.any():
-            #     pseudo_loss = (loss_per_sample * confident_mask).mean()
-            # else:
-            #     pseudo_loss = torch.tensor(0.0, device=pseudo_logits.device)
-            #     print(f"[Pseudo] No samples met top-{args.topk} threshold. Max sum: {topk_probs.sum(dim=1).max():.4f}")
-            #     global pseudo_miss
-            #     pseudo_miss += 1
-
-            # BOOSTING
-            topk_probs, topk_indices = torch.topk(pseudo_probs, k=args.topk, dim=1)
-            confident_mask = topk_probs.sum(dim=1) > args.pseudo_threshold
-
-            # Boost top-k probs
-            boost_factor = 2.0  # You can tune this
-            boosted_targets = pseudo_probs.clone()
-            boosted_targets.scatter_(
-                1,
-                topk_indices,
-                pseudo_probs.gather(1, topk_indices) * boost_factor
-            )
-            boosted_targets = boosted_targets / boosted_targets.sum(dim=1, keepdim=True)
-
-            # Compute KL loss
-            student_log_probs = F.log_softmax(pseudo_logits, dim=1)
-            loss_per_sample = F.kl_div(student_log_probs, boosted_targets.detach(), reduction='none').sum(dim=1)
-
-            if confident_mask.any():
-                pseudo_loss = (loss_per_sample * confident_mask).mean()
-            else:
-                pseudo_loss = torch.tensor(0.0, device=pseudo_logits.device)
-                print(f"[Pseudo] No samples met top-{args.topk} threshold. Max sum: {topk_probs.sum(dim=1).max():.4f}")
-                global pseudo_miss
-                pseudo_miss += 1
-
-        else:
-            raise ValueError(f"Unknown pseudo_mode: {args.pseudo_mode}")
-
-        acc = accuracy_score(torch.argmax(pseudo_logits.detach().cpu(), dim=1), y)
-        print(f"[Pseudo] Mode: {args.pseudo_mode} | Pseudo acc: {acc:.4f} | Loss: {pseudo_loss.item():.4f}")
-
-        return pseudo_loss
-
     def pseudo_loss_adv2(self, y, pseudo_logits):
         pseudo_loss = torch.tensor(0.0, device=device)
         if args.epsilon == 0.0:
@@ -304,9 +209,7 @@ class C_EDESC(nn.Module):
         pseudo_probs = pseudo_logits
         pseudo_probs = pseudo_probs / pseudo_logits.sum(dim=1, keepdim=True)
 
-
         max_probs, pseudo_labels = torch.max(pseudo_probs, dim=1)
-
 
         topk_probs, topk_indices = torch.topk(pseudo_probs, k=args.topk, dim=1)
         confident_mask = (topk_probs.sum(dim=1) > args.pseudo_threshold
@@ -348,32 +251,6 @@ class C_EDESC(nn.Module):
             cross_loss = F.cross_entropy(y_pred,
                                      torch.from_numpy(y).long()) if not y_pred.numel() == 0 else torch.tensor(0)
         return cross_loss
-
-    def contrastive_loss_topk(self, s, temperature=0.5, k=3):
-        """
-        Contrastive loss using top-k most similar as positives
-        s: [batch_size, num_clusters] soft cluster assignment matrix
-        """
-        s = F.normalize(s, dim=1)  # [B, C]
-        sim_matrix = torch.matmul(s, s.T) / temperature  # [B, B]
-
-        batch_size = s.size(0)
-        mask = torch.eye(batch_size, device=s.device).bool()
-        sim_matrix.masked_fill_(mask, -9e15)  # remove self-similarity
-
-        # Get top-k positive indices
-        _, topk_indices = torch.topk(sim_matrix, k=k, dim=1)
-
-        # Create target distribution for positives
-        pos_mask = torch.zeros_like(sim_matrix)
-        pos_mask.scatter_(1, topk_indices, 1.0)
-
-        # Apply log-softmax to similarity
-        logits = F.log_softmax(sim_matrix, dim=1)
-
-        # Compute contrastive loss as the average log-prob of positives
-        loss = - (logits * pos_mask).sum(dim=1) / k
-        return loss.mean()
 
     def supervised_contrastive_loss(self, s, labels, temperature=0.5):
         """
@@ -457,8 +334,9 @@ def train_one_epoch_fixmatch(X, train_size):
 
 def train_EDESC(device, i):
 
-    # for whatever reason this function does not take global scope, so this is required for reproducability
-    setup_seed(42)
+    # for whatever reason this function does not take global scope, so this is required for reproducibility
+    seed = 42
+    setup_seed(seed)
 
     model = C_EDESC(
         n_input=args.n_input,
@@ -488,30 +366,16 @@ def train_EDESC(device, i):
     data = torch.Tensor(data).to(device)
     x_bar, hidden = get_initial_value(model, data)
 
-    #passed as decimal number: 0.01 = 1% labeled data used
-    label_pct = args.label_usage
-
-    # TODO: chances are that not all classes are within the l_feats selection
-    # get random indices throughout the entire dataset
-    indices = torch.randperm(len(y))
     print(f'seed: {np.random.get_state()[1][0]}')
-    train_size = int(label_pct*len(y)) # only use a percentage of all the indices
-    train_indices = indices[:train_size]
+    # TODO: chances are that not all classes are within the l_feats selection for percentage wise selection
+    u_feats, l_feats, l_targets, mask_lab = get_labeled_data(y, data, args.label_usage, seed)
 
-    mask_lab = torch.zeros(len(y), dtype=torch.bool) # Create a boolean mask of the same length as y, initialized to False
-    mask_lab[train_indices] = True # Set the indices corresponding to labelled samples to True
-    u_feats = data[~mask_lab]
-    # u_targets = y[~mask_lab]
-    l_feats = data[mask_lab]
-    l_targets = y[mask_lab]
-
-    random_seed = 42
-    kmeans = KMeans(n_clusters=args.n_clusters, n_init=30, random_state=random_seed)
+    kmeans = KMeans(n_clusters=args.n_clusters, n_init=30, random_state=seed)
     y_pred = kmeans.fit_predict(hidden.data.cpu().numpy().reshape(dataset.__len__(), -1))
     print("Initial Cluster Centers: ", y_pred)
 
     kmeans = SemiSupKMeans(k=args.n_clusters, tolerance=1e-4, max_iterations=300, init='k-means++',
-                           n_init=30, random_state=random_seed, n_jobs=-1, pairwise_batch_size=1024,
+                           n_init=30, random_state=seed, n_jobs=-1, pairwise_batch_size=1024,
                            mode=None)
 
     u_feats = torch.tensor(u_feats, dtype=torch.float32)
@@ -525,7 +389,7 @@ def train_EDESC(device, i):
 
     print(f"kmeans: {accuracy_score(y_pred, y)}")
     print(f"sskmeans unlabelled: {accuracy_score(all_preds[~mask_lab], y[~mask_lab])}")
-    print(f"sskmeans labelled: {accuracy_score(all_preds[mask_lab], y[mask_lab])}")
+    print(f"sskmeans labelled: {accuracy_score(all_preds[mask_lab], l_targets)}")
     print(f"sskmeans both: {accuracy_score(all_preds, y)}")
 
     # TODO: ss-k-means does not increase performance at all, further more it is also inconsistent in being better...
@@ -547,7 +411,7 @@ def train_EDESC(device, i):
 
     for epoch_iter in range(epochs):
 
-        x_bar, s, z, pseudo_logits = model(data)
+        x_bar, s, z, _ = model(data)
 
         ratio = (s > 0.90).sum() / s.shape[0]
 
@@ -558,7 +422,7 @@ def train_EDESC(device, i):
         y_pred = s.cpu().detach().numpy().argmax(1)
         y_pred_remap, acc, kappa, nmi, ca, mapping = cluster_accuracy(y, y_pred, return_aligned=True)
 
-        # originally this was just ration> max_ratio
+        # originally this was just ration> max_ratio, though increasing accuracy should also be important?
         if ratio > max_ratio and acc > accmax:
             accmax = acc
             kappa_max = kappa
@@ -582,8 +446,8 @@ def train_EDESC(device, i):
         y_pred_logits_remap = logits[:, perm]
 
         # Train test splitting as an arbitrary way of limiting data
-        y_pred_logits_remap_partial = y_pred_logits_remap[train_indices]
-        y_partial = y[train_indices]
+        y_pred_logits_remap_partial = y_pred_logits_remap[mask_lab]
+        y_partial = l_targets
 
         total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2 = model.total_loss(
             x=data,
@@ -605,8 +469,8 @@ def train_EDESC(device, i):
             s[:, perm]
         )
 
-        s_labeled = s[train_indices]
-        y_labeled = torch.tensor(y[train_indices], device=s.device)
+        s_labeled = s[mask_lab]
+        y_labeled = torch.tensor(l_targets, device=s.device)
         contr_loss = model.supervised_contrastive_loss(s_labeled, y_labeled) #maybe also use/add high conf pseudo labels?
         omega = args.omega
         total_loss  = (total_loss +
@@ -630,7 +494,7 @@ def train_EDESC(device, i):
     end = time.time()
     print('Running time: ', end - start)
     if args.delta != .0:
-        print(f"percentage of labeled data used: {label_pct} meaning {len(y_pred_logits_remap_partial)}/{len(y)} used")
+        print(f"percentage of labeled data used: {args.label_usage} meaning {len(y_pred_logits_remap_partial)}/{len(y)} used")
     return accmax, nmimax, kappa_max, ca_max
 
 
@@ -668,7 +532,7 @@ if __name__ == "__main__":
     parser.add_argument('--beta', default=8, type=float, help='the weight of local_loss')
     parser.add_argument('--gama', default=0.03, type=float, help='the weight of non_local_loss')
     parser.add_argument('--delta', default=.0, type=float, help='the weight of the cross_entropy_loss')
-    parser.add_argument('--label_usage', default=.001, type=float, help='decimal deciding how much labeled data to be used during training')
+    parser.add_argument('--label_usage', default=.01, type=float, help='decimal deciding how much labeled data to be used during training')
     parser.add_argument('--epsilon', default=0.0, type=float, help='the weight of the pseudo_label_loss')
     parser.add_argument('--pseudo_threshold', default=.95, type=float, help='minimum confidence of the pseudo predications to be used')
     parser.add_argument('--topk', default=1, type=int, help="count of pseudo labels to be summed for the threshold to be met")

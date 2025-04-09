@@ -100,7 +100,7 @@ def get_labeled_data(y, X, label_size = 3, random_state = 42):
         l_feats = X[mask_lab]
         l_targets = y[mask_lab]
 
-        return u_feats, l_feats, l_targets
+        return u_feats, l_feats, l_targets, mask_lab
 
     else:
         # number of labeled examples per class
@@ -132,7 +132,7 @@ def get_labeled_data(y, X, label_size = 3, random_state = 42):
         l_targets = y[mask_lab]
         u_feats = X[~mask_lab]
 
-        return u_feats, l_feats, l_targets
+        return u_feats, l_feats, l_targets, mask_lab
 
 
 
