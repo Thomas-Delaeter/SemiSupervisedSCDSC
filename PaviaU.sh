@@ -40,7 +40,7 @@ python Model.py \
     --pre_train_iters ${pre_train_iters} \
     --alpha ${alpha} \
     --beta ${beta} \
-    --gama ${gama} > $OUTPUT_FILE
+    --gama ${gama} | tee $OUTPUT_FILE
 
 
 # Confirm where the output has been saved

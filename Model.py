@@ -14,7 +14,7 @@ from attention_span_classifier import AttentionPseudoClassifier
 from my_knn import get_initial_value
 from Auto_encoder import Ae
 from getdata import Load_my_Dataset
-from utils import cluster_accuracy
+from utils import cluster_accuracy, ascii_histogram
 import warnings
 from Initialize_D import Initialization_D
 from Constraint import D_constraint1, D_constraint2
@@ -107,19 +107,19 @@ class C_EDESC(nn.Module):
         # Pseudo-Label Module
         latent_dim = n_z * 7 * 7
         # self.pseudo_classifier = nn.Linear(latent_dim, n_clusters)
-        # Is this too complex already? latent sample is (n_z, 7, 7)
-        self.pseudo_classifier = nn.Sequential(
-            nn.Conv2d(n_z, 64, kernel_size=3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-            # nn.Dropout(p=0.3),
-            nn.Conv2d(64, 32, kernel_size=3, padding=1),
-            nn.BatchNorm2d(32),
-            nn.ReLU(),
-            nn.AdaptiveAvgPool2d(1),
-            nn.Flatten(),
-            nn.Linear(32, n_clusters)
-        )
+        # Not used: using S instead
+        # self.pseudo_classifier = nn.Sequential(
+        #     nn.Conv2d(n_z, 64, kernel_size=3, padding=1),
+        #     nn.BatchNorm2d(64),
+        #     nn.ReLU(),
+        #     # nn.Dropout(p=0.3),
+        #     nn.Conv2d(64, 32, kernel_size=3, padding=1),
+        #     nn.BatchNorm2d(32),
+        #     nn.ReLU(),
+        #     nn.AdaptiveAvgPool2d(1),
+        #     nn.Flatten(),
+        #     nn.Linear(32, n_clusters)
+        # )
         # self.pseudo_classifier = AttentionPseudoClassifier(n_z, n_clusters)
 
     def pretrain(self, path=''):
@@ -134,9 +134,9 @@ class C_EDESC(nn.Module):
         x_bar, z = self.ae(x)
 
         # Pseudo Label
-        pseudo_logits = self.pseudo_classifier(
-            z#.detach()
-        )
+        # pseudo_logits = self.pseudo_classifier(
+        #     z#.detach()
+        # )
 
         z_shape = z.shape
         num_ = z_shape[0]
@@ -155,7 +155,7 @@ class C_EDESC(nn.Module):
         s = (s + eta * d) / ((eta + 1) * d)
         s = (s.t() / torch.sum(s, 1)).t()
 
-        return x_bar, s, z, pseudo_logits
+        return x_bar, s, z, 0
 
     def total_loss(self, x, x_bar, center, target, dim, n_clusters, s, index):
         # Reconstruction loss
@@ -296,32 +296,29 @@ class C_EDESC(nn.Module):
         return pseudo_loss
 
     def pseudo_loss_adv2(self, y, pseudo_logits):
-        # TODO: un softmax-ify this function
         pseudo_loss = torch.tensor(0.0, device=device)
         if args.epsilon == 0.0:
             return pseudo_loss
 
-        use_temperature_scaling = True
-        temperature = 1.5  # You can tune this or set via args
+        # s already provides some kind of distribution so just normalizing
+        pseudo_probs = pseudo_logits
+        pseudo_probs = pseudo_probs / pseudo_logits.sum(dim=1, keepdim=True)
 
-        # Temperature scaling
-        if use_temperature_scaling:
-            pseudo_logits = torch.log(pseudo_logits + 1e-8) if pseudo_logits.max() <= 1.0 else pseudo_logits
-            pseudo_probs = F.softmax(pseudo_logits / temperature, dim=1)
-        else:
-            pseudo_probs = F.softmax(pseudo_logits, dim=1)
 
         max_probs, pseudo_labels = torch.max(pseudo_probs, dim=1)
 
+
         topk_probs, topk_indices = torch.topk(pseudo_probs, k=args.topk, dim=1)
-        confident_mask = (topk_probs.sum(dim=1) > args.pseudo_threshold)
+        confident_mask = (topk_probs.sum(dim=1) > args.pseudo_threshold
+                          # * args.topk
+                          )
 
         # Reweight top-k probs
         boosted_targets = pseudo_probs.clone()
-        boosted_targets.scatter_(1, topk_indices, topk_probs * 2.0)  # Boost top-k by 2x
+        boosted_targets.scatter_(1, topk_indices, topk_probs * 2)  # Boost top-k samples
         boosted_targets = boosted_targets / boosted_targets.sum(dim=1, keepdim=True)
 
-        loss_per_sample = F.kl_div(F.log_softmax(pseudo_logits, dim=1), boosted_targets.detach(),
+        loss_per_sample = F.kl_div(torch.log(pseudo_probs + 1e-8), boosted_targets.detach(),
                                    reduction='none').sum(dim=1)
 
         if confident_mask.any():
@@ -332,23 +329,76 @@ class C_EDESC(nn.Module):
             pseudo_miss += 1
 
         # ece logging
-        if not hasattr(self, '_ece_call_count'):
-            self._ece_call_count = 0
-        self._ece_call_count += 1
-
-        if self._ece_call_count % 10 == 0:
-            print(f"ECE vs true: {compute_ece(pseudo_probs.detach().cpu().numpy(), y)}")
-            print(f"ECE vs argmax: {compute_ece(pseudo_probs.detach().cpu().numpy(), pseudo_labels.cpu())}")
-
-            acc = accuracy_score(torch.argmax(pseudo_probs.detach().cpu(), dim=1), y)
-            print(f"[Pseudo] Mode: {args.pseudo_mode} | Acc: {acc:.4f} | Loss: {pseudo_loss.item():.4f}")
+        # if not hasattr(self, '_ece_call_count'):
+        #     self._ece_call_count = 0
+        # self._ece_call_count += 1
+        #
+        # if self._ece_call_count % 10 == 0:
+        #     print(f"ECE vs true: {compute_ece(pseudo_probs.detach().cpu().numpy(), y)}")
+        #     print(f"ECE vs argmax: {compute_ece(pseudo_probs.detach().cpu().numpy(), pseudo_labels.cpu())}")
+        #
+        #     acc = accuracy_score(torch.argmax(pseudo_probs.detach().cpu(), dim=1), y)
+        #     print(f"[Pseudo] Mode: topk | Acc: {acc:.4f} | Loss: {pseudo_loss.item():.4f}")
 
         return pseudo_loss
 
     def cross_loss(self, y_pred, y):
-        cross_loss = F.cross_entropy(y_pred,
-                                 torch.from_numpy(y).long()) if not y_pred.numel() == 0 else torch.tensor(0)
+        cross_loss = torch.tensor(0.0, device=device)
+        if args.delta != 0.0:
+            cross_loss = F.cross_entropy(y_pred,
+                                     torch.from_numpy(y).long()) if not y_pred.numel() == 0 else torch.tensor(0)
         return cross_loss
+
+    def contrastive_loss_topk(self, s, temperature=0.5, k=3):
+        """
+        Contrastive loss using top-k most similar as positives
+        s: [batch_size, num_clusters] soft cluster assignment matrix
+        """
+        s = F.normalize(s, dim=1)  # [B, C]
+        sim_matrix = torch.matmul(s, s.T) / temperature  # [B, B]
+
+        batch_size = s.size(0)
+        mask = torch.eye(batch_size, device=s.device).bool()
+        sim_matrix.masked_fill_(mask, -9e15)  # remove self-similarity
+
+        # Get top-k positive indices
+        _, topk_indices = torch.topk(sim_matrix, k=k, dim=1)
+
+        # Create target distribution for positives
+        pos_mask = torch.zeros_like(sim_matrix)
+        pos_mask.scatter_(1, topk_indices, 1.0)
+
+        # Apply log-softmax to similarity
+        logits = F.log_softmax(sim_matrix, dim=1)
+
+        # Compute contrastive loss as the average log-prob of positives
+        loss = - (logits * pos_mask).sum(dim=1) / k
+        return loss.mean()
+
+    def supervised_contrastive_loss(self, s, labels, temperature=0.5):
+        """
+        Supervised contrastive loss on the soft assignment matrix `s`
+        s: [N, C] soft cluster matrix
+        labels: [N] ground-truth labels for supervised samples
+        """
+        s = F.normalize(s, dim=1)
+        sim_matrix = torch.matmul(s, s.T) / temperature  # cosine similarity -> becomes O(n**2)
+
+        # Exclude self-comparisons
+        mask = torch.eye(len(labels), device=s.device).bool()
+        sim_matrix.masked_fill_(mask, -9e15)
+
+        # Create mask of positive pairs (same label)
+        label_mask = labels.unsqueeze(0) == labels.unsqueeze(1)  # [N, N]
+        label_mask.fill_diagonal_(False)  # remove self
+
+        # Compute log-softmax over similarity matrix
+        log_prob = F.log_softmax(sim_matrix, dim=1)
+
+        # Only keep log-probs of positives
+        loss = - (log_prob * label_mask.float()).sum(dim=1) / label_mask.sum(dim=1).clamp(min=1)
+        return loss.mean()
+
 
 def spatial_filter(data_matrix, location, image_size):
     data_matrix = data_matrix.reshape([data_matrix.shape[0], -1])
@@ -421,6 +471,8 @@ def train_EDESC(device, i):
     data = data.astype(np.float16)
     y = dataset.y
 
+    ascii_histogram(y)
+
     # utilize finch to generate big groups
     from finch import FINCH
     data = data.reshape(data.shape[0], -1)
@@ -432,8 +484,6 @@ def train_EDESC(device, i):
     data = dataset.train
 
     optimizer = Adam(model.parameters(), lr=args.lr)
-    #TODO: technically the pseudo optimizer should exclude the loss from the auto-encoder
-    optimizer_pseudo = Adam(model.pseudo_classifier.parameters(), lr=args.lr)
     index = dataset.index
     data = torch.Tensor(data).to(device)
     x_bar, hidden = get_initial_value(model, data)
@@ -509,7 +559,7 @@ def train_EDESC(device, i):
         y_pred_remap, acc, kappa, nmi, ca, mapping = cluster_accuracy(y, y_pred, return_aligned=True)
 
         # originally this was just ration> max_ratio
-        if ratio > max_ratio or acc > accmax:
+        if ratio > max_ratio and acc > accmax:
             accmax = acc
             kappa_max = kappa
             nmimax = nmi
@@ -555,7 +605,15 @@ def train_EDESC(device, i):
             s[:, perm]
         )
 
-        total_loss = total_loss + args.delta * cross_loss + args.epsilon * pseudo_loss
+        s_labeled = s[train_indices]
+        y_labeled = torch.tensor(y[train_indices], device=s.device)
+        contr_loss = model.supervised_contrastive_loss(s_labeled, y_labeled) #maybe also use/add high conf pseudo labels?
+        omega = args.omega
+        total_loss  = (total_loss +
+                       args.delta * cross_loss +
+                       args.epsilon * pseudo_loss +
+                       omega * contr_loss
+                       )
 
         optimizer.zero_grad()
         total_loss.backward()
@@ -566,12 +624,13 @@ def train_EDESC(device, i):
                   ':Max Acc {:.4f}'.format(accmax), ', Current nmi {:.4f}'.format(nmi),
                   ':Max nmi {:.4f}'.format(nmimax), ', Current kappa {:.4f}'.format(kappa),
                   ':Max kappa {:.4f}'.format(kappa_max))
-            print("total_loss", total_loss.data, "reconstr_loss", reconstr_loss.data, "kl_loss", kl_loss.data, "entropy_loss", cross_loss.data, "pseudo_loss", pseudo_loss.data)
+            print("total_loss", total_loss.data, "reconstr_loss", reconstr_loss.data, "kl_loss", kl_loss.data, "entropy_loss", args.delta * cross_loss.data, "pseudo_loss", args.epsilon * pseudo_loss.data, "contras_loss", omega * contr_loss.data)
             print(ratio)
 
     end = time.time()
     print('Running time: ', end - start)
-    print(f"percentage of labeled data used: {label_pct} meaning {len(y_pred_logits_remap_partial)}/{len(y)} used")
+    if args.delta != .0:
+        print(f"percentage of labeled data used: {label_pct} meaning {len(y_pred_logits_remap_partial)}/{len(y)} used")
     return accmax, nmimax, kappa_max, ca_max
 
 
@@ -609,10 +668,11 @@ if __name__ == "__main__":
     parser.add_argument('--beta', default=8, type=float, help='the weight of local_loss')
     parser.add_argument('--gama', default=0.03, type=float, help='the weight of non_local_loss')
     parser.add_argument('--delta', default=.0, type=float, help='the weight of the cross_entropy_loss')
-    parser.add_argument('--label_usage', default=.01, type=float, help='decimal deciding how much labeled data to be used during training')
-    parser.add_argument('--epsilon', default=1, type=float, help='the weight of the pseudo_label_loss')
-    parser.add_argument('--pseudo_threshold', default=.7, type=float, help='minimum confidence of the pseudo predications to be used')
-    parser.add_argument('--topk', default=2, type=int, help="count of pseudo labels to be summed for the threshold to be met")
+    parser.add_argument('--label_usage', default=.001, type=float, help='decimal deciding how much labeled data to be used during training')
+    parser.add_argument('--epsilon', default=0.0, type=float, help='the weight of the pseudo_label_loss')
+    parser.add_argument('--pseudo_threshold', default=.95, type=float, help='minimum confidence of the pseudo predications to be used')
+    parser.add_argument('--topk', default=1, type=int, help="count of pseudo labels to be summed for the threshold to be met")
+    parser.add_argument('--omega', default=0.5, type=float, help='the weight of the contrastive_loss')
 
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
