@@ -111,18 +111,18 @@ class C_EDESC(nn.Module):
         # Pseudo-Label Module
         latent_dim = n_z * 7 * 7
         # self.pseudo_classifier = nn.Linear(latent_dim, n_clusters)
-        # self.pseudo_classifier = nn.Sequential(
-        #     nn.Conv2d(n_z, 64, kernel_size=3, padding=1),
-        #     nn.BatchNorm2d(64),
-        #     nn.ReLU(),
-        #     # nn.Dropout(p=0.3),
-        #     nn.Conv2d(64, 32, kernel_size=3, padding=1),
-        #     nn.BatchNorm2d(32),
-        #     nn.ReLU(),
-        #     nn.AdaptiveAvgPool2d(1),
-        #     nn.Flatten(),
-        #     nn.Linear(32, n_clusters)
-        # )
+        self.pseudo_classifier = nn.Sequential(
+            nn.Conv2d(n_z, 64, kernel_size=3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+            # nn.Dropout(p=0.3),
+            nn.Conv2d(64, 32, kernel_size=3, padding=1),
+            nn.BatchNorm2d(32),
+            nn.ReLU(),
+            nn.AdaptiveAvgPool2d(1),
+            nn.Flatten(),
+            nn.Linear(32, n_clusters)
+        )
         # self.pseudo_classifier = AttentionPseudoClassifier(n_z, n_clusters)
 
     def pretrain(self, path=''):
@@ -137,9 +137,10 @@ class C_EDESC(nn.Module):
         x_bar, z = self.ae(x)
 
         # Pseudo Label
-        # pseudo_logits = self.pseudo_classifier(
-        #     z#.detach()
-        # )
+        z_aug = z + torch.randn_like(z) * 0.1
+        pseudo_logits = self.pseudo_classifier(
+            z_aug
+        )
 
         z_shape = z.shape
         num_ = z_shape[0]
@@ -158,7 +159,7 @@ class C_EDESC(nn.Module):
         s = (s + eta * d) / ((eta + 1) * d)
         s = (s.t() / torch.sum(s, 1)).t()
 
-        return x_bar, s, z, 0
+        return x_bar, s, z, pseudo_logits
 
     def total_loss(self, x, x_bar, center, target, dim, n_clusters, s, index):
         # Reconstruction loss
@@ -232,7 +233,7 @@ class C_EDESC(nn.Module):
         if confident_mask.any():
             pseudo_loss = (loss_per_sample * confident_mask).mean()
         else:
-            print(f"[Pseudo] No samples met top-{args.topk} threshold. Max sum: {topk_probs.sum(dim=1).max():.4f}")
+            print(f"[Pseudo] No samples met top-{args.topk} > {args.pseudo_threshold}. Max sum: {topk_probs.sum(dim=1).max():.4f}")
             global pseudo_miss
             pseudo_miss += 1
 
@@ -281,6 +282,23 @@ class C_EDESC(nn.Module):
         # Only keep log-probs of positives
         loss = - (log_prob * label_mask.float()).sum(dim=1) / label_mask.sum(dim=1).clamp(min=1)
         return loss.mean()
+
+    def fixmatch_style_loss(self, y, S, pseudo_logits, threshold=.95):
+
+        fm_loss = torch.tensor(0.0, device=device)
+
+        S_probs = S / S.sum(dim=1, keepdim=True)
+        max_probs, pseudo_labels = torch.max(S_probs, dim=1)
+        mask = max_probs >= threshold
+
+        if mask.sum() == 0:
+            print(f"[FM-style] No samples met {threshold} threshold. Max sum: {max_probs.max():.4f}")
+            return fm_loss
+
+        pseudo_probs = F.softmax(pseudo_logits, dim=1)
+        fm_loss = F.cross_entropy(pseudo_probs[mask], pseudo_labels[mask])
+
+        return fm_loss
 
 
 def spatial_filter(data_matrix, location, image_size):
@@ -558,7 +576,7 @@ def train_EDESC(device, i):
     for epoch_iter in range(epochs):
 
         with autocast():
-            x_bar, s, z, _ = model(data)
+            x_bar, s, z, pseudo_logits = model(data)
 
             ratio = (s > 0.90).sum() / s.shape[0]
 
@@ -620,14 +638,13 @@ def train_EDESC(device, i):
             y_labeled = torch.tensor(l_targets, device=s.device)
             contr_loss = model.supervised_contrastive_loss(s_labeled, y_labeled) #maybe also use/add high conf pseudo labels?
 
-            # fixmatch_loss = torch.tensor(0.0, device=device)
-            fixmatch_loss = train_one_epoch_fixmatch(model,u_feats, scaler, threshold=.8, device=device)
+            fixmatch_loss =  model.fixmatch_style_loss(y, s[:,perm], pseudo_logits[:,perm], .80)
 
             total_loss  = (total_loss +
                            args.delta * cross_loss +
                            args.epsilon * pseudo_loss +
-                           args.omega * contr_loss +
-                           args.delta * fixmatch_loss
+                           args.psi * fixmatch_loss +
+                           args.omega * contr_loss
                            )
 
             scaler.scale(total_loss).backward()
@@ -641,7 +658,7 @@ def train_EDESC(device, i):
             writer.add_scalar('Loss/CE', cross_loss.item() * args.delta, epoch_iter)
             writer.add_scalar('Loss/pseudo', pseudo_loss.item() * args.epsilon, epoch_iter)
             writer.add_scalar('Loss/contrastive', contr_loss.item() * args.omega, epoch_iter)
-            writer.add_scalar('Loss/FM', fixmatch_loss.item() * args.delta, epoch_iter)
+            writer.add_scalar('Loss/FM', fixmatch_loss.item() * args.psi, epoch_iter)
 
             if epoch_iter % 10 == 0 or epoch_iter == epochs - 1:
                 print('[Eval]', 'Iter {}'.format(epoch_iter), ':Current Acc {:.4f}'.format(acc),
@@ -656,7 +673,7 @@ def train_EDESC(device, i):
                     f"entropy: {(args.delta * cross_loss.data):.4f} | "
                     f"pseudo: {(args.epsilon * pseudo_loss.data):.4f} | "
                     f"contras: {(args.omega * contr_loss.data):.4f} | "
-                    f"FM: {(args.delta * fixmatch_loss.data):.4f}"
+                    f"FM: {(args.psi * fixmatch_loss.data):.4f}"
                 )
                 print("[Eval]", "ratio", ratio.data)
 
@@ -665,7 +682,7 @@ def train_EDESC(device, i):
     writer.close()
     print('Running time: ', end - start)
 
-    if args.delta != .0:
+    if args.delta != .0 or args.omega != .0:
         print(f"{'percentage' if args.label_usage < 1 else 'number'} of labeled data used: {args.label_usage} meaning {len(y_pred_logits_remap_partial)}/{len(y)} used")
 
     return accmax, nmimax, kappa_max, ca_max
@@ -703,11 +720,12 @@ if __name__ == "__main__":
     parser.add_argument('--beta', default=8, type=float, help='the weight of local_loss')
     parser.add_argument('--gama', default=0.03, type=float, help='the weight of non_local_loss')
     # semi-supervised parameters
-    parser.add_argument('--label_usage', default=5, type=float, help='decimal% or absolute value of labeled data used during training')
+    parser.add_argument('--label_usage', default=1, type=float, help='decimal% or absolute value of labeled data used during training')
     parser.add_argument('--delta', default=.5, type=float, help='the weight of the cross_entropy_loss')
     parser.add_argument('--epsilon', default=2, type=float, help='the weight of the pseudo_label_loss')
     parser.add_argument('--pseudo_threshold', default=.95, type=float, help='minimum confidence of the pseudo predications to be used')
     parser.add_argument('--topk', default=1, type=int, help="count of pseudo labels to be summed for the threshold to be met")
+    parser.add_argument('--psi', default=.5, type=float, help='the weight of the fixmatch-style_loss')
     parser.add_argument('--omega', default=.5, type=float, help='the weight of the contrastive_loss')
 
     args = parser.parse_args()
