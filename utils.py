@@ -86,7 +86,6 @@ def get_labeled_data(y, X, label_size = 3, random_state = 42):
         # TODO: chances are that not all classes are within the l_feats selection
         # get random indices throughout the entire dataset
         indices = torch.randperm(len(y))
-        print(f'seed: {np.random.get_state()[1][0]}')
         train_size = int(label_pct * len(y))  # only use a percentage of all the indices
         train_indices = indices[:train_size]
 
@@ -104,26 +103,26 @@ def get_labeled_data(y, X, label_size = 3, random_state = 42):
 
     else:
         # number of labeled examples per class
-        classes = torch.unique(y)
-        # get all unique class labels
         num_labeled_per_class = label_size
 
-        # Initialize all False
-        mask_lab = torch.zeros(len(y), dtype=torch.bool)
-
-        # Set random seed for reproducibility
         # Resetting them here because python scope is funky
         torch.manual_seed(random_state)
         np.random.seed(random_state)
 
-        for cls in classes:
-            cls_indices = (y == cls).nonzero(as_tuple=True)[0]
+        # get all unique class labels
+        unique_classes = np.unique(y)
 
-            # Ensure we have at least `num_labeled_per_class` samples in the class
+        # Initialize all False
+        # mask_lab = torch.zeros(len(y),dtype=torch.bool)
+        mask_lab = np.zeros(len(y), dtype=bool)
+
+        for cls in unique_classes:
+            cls_indices = np.where(y == cls)[0]
+
             if len(cls_indices) >= num_labeled_per_class:
-                selected = cls_indices[torch.randperm(len(cls_indices))[:num_labeled_per_class]]
+                selected = np.random.choice(cls_indices, num_labeled_per_class, replace=False)
             else:
-                raise ValueError(f"Class {cls.item()} has fewer than {num_labeled_per_class} samples.")
+                raise ValueError(f"Class {cls} has fewer than {num_labeled_per_class} samples.")
 
             mask_lab[selected] = True
 

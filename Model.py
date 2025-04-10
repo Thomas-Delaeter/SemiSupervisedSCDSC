@@ -8,9 +8,12 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 from torch.optim import Adam
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, TensorDataset
 
 from attention_span_classifier import AttentionPseudoClassifier
+from consistency_regularization import WeakAug, HSIRandAugment
+from consistency_regularization_gpu import WeakAug as WeakAugGPU
+from consistency_regularization_gpu import HSIRandAugment as HSIRandAugGPU
 from my_knn import get_initial_value
 from Auto_encoder import Ae
 from getdata import Load_my_Dataset
@@ -25,7 +28,7 @@ import random
 from faster_mix_k_means_pytorch import K_Means as SemiSupKMeans
 from cluster_and_log_utils import log_accs_from_preds
 from sklearn.metrics import accuracy_score
-
+from torch.cuda.amp import autocast, GradScaler
 
 torch.backends.cudnn.benchmark = False
 torch.backends.cudnn.enabled = True
@@ -104,10 +107,10 @@ class C_EDESC(nn.Module):
         # self.Coef = Parameter(torch.Tensor(batch_size,batch_size))
         # nn.init.constant_(self.Coef, 1e-5)
 
+        # Depreciated: using S instead
         # Pseudo-Label Module
         latent_dim = n_z * 7 * 7
         # self.pseudo_classifier = nn.Linear(latent_dim, n_clusters)
-        # Not used: using S instead
         # self.pseudo_classifier = nn.Sequential(
         #     nn.Conv2d(n_z, 64, kernel_size=3, padding=1),
         #     nn.BatchNorm2d(64),
@@ -200,7 +203,9 @@ class C_EDESC(nn.Module):
 
         return pseudo_loss
 
-    def pseudo_loss_adv2(self, y, pseudo_logits):
+    def pseudo_loss_S(self, y, pseudo_logits):
+        # Same as pseudo_loss but uses S, which already is a distribution
+
         pseudo_loss = torch.tensor(0.0, device=device)
         if args.epsilon == 0.0:
             return pseudo_loss
@@ -263,7 +268,8 @@ class C_EDESC(nn.Module):
 
         # Exclude self-comparisons
         mask = torch.eye(len(labels), device=s.device).bool()
-        sim_matrix.masked_fill_(mask, -9e15)
+        # mixed precision, use -9e15 if you do not plan on using it
+        sim_matrix.masked_fill_(mask, -1e4)
 
         # Create mask of positive pairs (same label)
         label_mask = labels.unsqueeze(0) == labels.unsqueeze(1)  # [N, N]
@@ -327,16 +333,150 @@ def pretrain_ae(model):
         torch.save(model.state_dict(), args.pretrain_path)
     print("Model saved to {}.".format(args.pretrain_path))
 
-def train_one_epoch_fixmatch(X, train_size):
-    # TODO: - future work - from consistency_regularization.py use a weak and strong augmentation,
-    #  force the same pseudo and use strong augementation result as loss
-    pass
+def train_one_epoch_fixmatch_minibatched(model, unlabeled_data, scaler, batch_size=64, threshold=0.95, temperature=1.0, device='cuda:0'):
+    """
+    Apply FixMatch-style training for one epoch.
+
+    Args:
+        model (C_EDESC): The model to train.
+        unlabeled_data (Tensor): Tensor of shape [N, C, H, W].
+        threshold (float): Confidence threshold for pseudo-labeling.
+        temperature (float): Softmax temperature scaling.
+        device (str): Device to run computations on.
+
+    Returns:
+        fixmatch_loss (torch.Tensor): Average FixMatch loss for this epoch.
+    """
+
+    # stopped developing this function, depreciated
+
+    model.train()
+
+    # weak_aug = WeakAug()
+    # strong_aug = HSIRandAugment()
+
+    weak_aug = WeakAugGPU()
+    strong_aug = HSIRandAugGPU()
+
+    # Wrap tensor in a Dataset and create DataLoader
+    unlabeled_dataset = TensorDataset(unlabeled_data)
+    loader = DataLoader(unlabeled_dataset, batch_size=batch_size, shuffle=True)
+
+    total_loss = 0.
+    total_count = 0
+
+    for (x_batch,) in loader:
+        x_batch = x_batch.to(device)
+
+        # Apply weak and strong augmentations
+        # weak_batch = torch.stack([weak_aug(x.clone().to(device)) for x in x_batch])
+        # strong_batch = torch.stack([strong_aug(x.clone().to(device)) for x in x_batch])
+        weak_batch = weak_aug(x_batch)
+        strong_batch = strong_aug(x_batch)
+
+        # Forward weakly augmented batch for pseudo-labels
+        with autocast():
+            _, s_weak, _, _ = model(weak_batch)
+            probs = F.softmax(s_weak / temperature, dim=1)
+            max_probs, pseudo_labels = torch.max(probs, dim=1)
+
+            mask = max_probs >= threshold
+
+            if mask.sum() == 0:
+                continue  # Skip this batch if no confident pseudo-labels
+
+            # Forward strongly augmented inputs
+            _, s_strong, _, _ = model(strong_batch[mask])
+
+            loss = F.cross_entropy(s_strong, pseudo_labels[mask])
+            total_loss += loss.item() * mask.sum().item()
+            total_count += mask.sum().item()
+
+        # Backprop
+        scaler.scale(loss).backward()
+        scaler.step(model.optimizer)
+        scaler.update()
+        model.optimizer.zero_grad()
+
+    # Normalize total loss
+    if total_count > 0:
+        print(f"[FM] No samples met {threshold} threshold. Max sum: {max_probs.max():.4f}")
+        return torch.tensor(total_loss / total_count)
+    else:
+        print(f"skipped fixmatch")
+        return torch.tensor(0.0, device=device)
+def train_one_epoch_fixmatch(model, unlabeled_data, scaler, batch_size=64, threshold=0.95, temperature=1.0, device='cuda:0'):
+    """
+    Apply FixMatch-style training for one epoch.
+
+    Args:
+        model (C_EDESC): The model to train.
+        unlabeled_data (Tensor): Tensor of shape [N, C, H, W].
+        threshold (float): Confidence threshold for pseudo-labeling.
+        temperature (float): Softmax temperature scaling.
+        device (str): Device to run computations on.
+
+    Returns:
+        fixmatch_loss (torch.Tensor): Average FixMatch loss for this epoch.
+    """
+
+    model.train()
+
+    weak_aug = WeakAugGPU()
+    strong_aug = HSIRandAugGPU()
+
+    # Wrap tensor in a Dataset and create DataLoader
+    unlabeled_dataset = TensorDataset(unlabeled_data)
+    loader = DataLoader(unlabeled_dataset, batch_size=len(unlabeled_data), shuffle=True)
+
+    total_loss = 0.
+    total_count = 0
+
+    for (x_batch,) in loader:
+        x_batch = x_batch.to(device)
+
+        # Apply weak and strong augmentations
+        # weak_batch = torch.stack([weak_aug(x.clone().to(device)) for x in x_batch])
+        # strong_batch = torch.stack([strong_aug(x.clone().to(device)) for x in x_batch])
+        weak_batch = weak_aug(x_batch)
+        strong_batch = strong_aug(x_batch)
+
+        # Forward weakly augmented batch for pseudo-labels
+        _, s_weak, _, _ = model(weak_batch)
+        probs = s_weak.detach() / s_weak.detach().sum(dim=1, keepdim=True)
+
+        max_probs, pseudo_labels = torch.max(probs, dim=1)
+
+        mask = max_probs >= threshold
+
+        if mask.sum() == 0:
+            print(f"[FM] No samples met {threshold} threshold. Max sum: {max_probs.max():.4f}")
+            continue  # Skip this batch if no confident pseudo-labels
+
+        # Forward strongly augmented inputs
+        _, s_strong, _, _ = model(strong_batch[mask])
+
+        loss = F.cross_entropy(s_strong, pseudo_labels[mask])
+        total_loss += loss.item() * mask.sum().item()
+        total_count += mask.sum().item()
+
+    # Normalize total loss
+    if total_count > 0:
+        return torch.tensor(total_loss / total_count)
+    else:
+        return torch.tensor(0.0, device=device)
+
 
 def train_EDESC(device, i):
+
+    start = time.time()
 
     # for whatever reason this function does not take global scope, so this is required for reproducibility
     seed = 42
     setup_seed(seed)
+
+    from torch.utils.tensorboard import SummaryWriter
+    writer = SummaryWriter(log_dir="tensorboard")
 
     model = C_EDESC(
         n_input=args.n_input,
@@ -344,7 +484,6 @@ def train_EDESC(device, i):
         n_clusters=args.n_clusters,
         pretrain_path=args.pretrain_path).to(device)
 
-    start = time.time()
     data = dataset.x
     data = data.astype(np.float16)
     y = dataset.y
@@ -359,10 +498,13 @@ def train_EDESC(device, i):
 
     model.pretrain(f'original_weight/{args.dataset}.pkl')
     # model.pretrain('') # empty path will pretrain again
-    data = dataset.train
 
     optimizer = Adam(model.parameters(), lr=args.lr)
+    model.optimizer = optimizer
+    scaler = GradScaler()
+
     index = dataset.index
+    data = dataset.train
     data = torch.Tensor(data).to(device)
     x_bar, hidden = get_initial_value(model, data)
 
@@ -374,25 +516,29 @@ def train_EDESC(device, i):
     y_pred = kmeans.fit_predict(hidden.data.cpu().numpy().reshape(dataset.__len__(), -1))
     print("Initial Cluster Centers: ", y_pred)
 
-    kmeans = SemiSupKMeans(k=args.n_clusters, tolerance=1e-4, max_iterations=300, init='k-means++',
-                           n_init=30, random_state=seed, n_jobs=-1, pairwise_batch_size=1024,
-                           mode=None)
+    # kmeans = SemiSupKMeans(k=args.n_clusters, tolerance=1e-4, max_iterations=300, init='k-means++',
+    #                        n_init=30, random_state=seed, n_jobs=-1, pairwise_batch_size=1024,
+    #                        mode=None)
 
     u_feats = torch.tensor(u_feats, dtype=torch.float32)
     l_feats = torch.tensor(l_feats, dtype=torch.float32)
     l_targets = torch.tensor(l_targets)
-    u_feats = u_feats.view(u_feats.size(0), -1)
-    l_feats = l_feats.view(l_feats.size(0), -1)
 
-    kmeans.fit_mix(u_feats, l_feats, l_targets)
-    all_preds = kmeans.labels_.cpu().numpy()
+
+    # u_feats = u_feats.view(u_feats.size(0), -1) #currently using u_feats for mixmatch, so if ss-k-means becomes relevant find fix for this
+    # l_feats = l_feats.view(l_feats.size(0), -1)
+
+    # kmeans.fit_mix(u_feats, l_feats, l_targets)
+    # all_preds = kmeans.labels_.cpu().numpy()
 
     print(f"kmeans: {accuracy_score(y_pred, y)}")
-    print(f"sskmeans unlabelled: {accuracy_score(all_preds[~mask_lab], y[~mask_lab])}")
-    print(f"sskmeans labelled: {accuracy_score(all_preds[mask_lab], l_targets)}")
-    print(f"sskmeans both: {accuracy_score(all_preds, y)}")
+    # print(f"sskmeans unlabelled: {accuracy_score(all_preds[~mask_lab], y[~mask_lab])}")
+    # print(f"sskmeans labelled: {accuracy_score(all_preds[mask_lab], l_targets)}")
+    # print(f"sskmeans both: {accuracy_score(all_preds, y)}")
 
-    # TODO: ss-k-means does not increase performance at all, further more it is also inconsistent in being better...
+    # TODO: ss-k-means does not increase performance at all
+    #  further more it is also inconsistent in being better for more labeled data...
+    #  maybe if labeled data is an absolute value per class
     # y_pred = all_preds
 
     # Initialize D
@@ -411,93 +557,118 @@ def train_EDESC(device, i):
 
     for epoch_iter in range(epochs):
 
-        x_bar, s, z, _ = model(data)
+        with autocast():
+            x_bar, s, z, _ = model(data)
 
-        ratio = (s > 0.90).sum() / s.shape[0]
+            ratio = (s > 0.90).sum() / s.shape[0]
 
-        # fancy indexing get the mean prediction of a mini-cluster
-        original_center = scatter_mean(src=s, index=torch.tensor(req_c, dtype=torch.int64, device=device), dim=0)
-        refined_center = refined_subspace_affinity(original_center)
+            # fancy indexing get the mean prediction of a mini-cluster
+            original_center = scatter_mean(src=s, index=torch.tensor(req_c, dtype=torch.int64, device=device), dim=0)
+            refined_center = refined_subspace_affinity(original_center)
 
-        y_pred = s.cpu().detach().numpy().argmax(1)
-        y_pred_remap, acc, kappa, nmi, ca, mapping = cluster_accuracy(y, y_pred, return_aligned=True)
+            y_pred = s.cpu().detach().numpy().argmax(1)
+            y_pred_remap, acc, kappa, nmi, ca, mapping = cluster_accuracy(y, y_pred, return_aligned=True)
 
-        # originally this was just ration> max_ratio, though increasing accuracy should also be important?
-        if ratio > max_ratio and acc > accmax:
-            accmax = acc
-            kappa_max = kappa
-            nmimax = nmi
-            ca_max = ca
-            max_ratio = ratio
+            # originally this was just ration> max_ratio, though increasing accuracy should also be important(?)
+            if ratio > max_ratio and acc > accmax:
+                accmax = acc
+                kappa_max = kappa
+                nmimax = nmi
+                ca_max = ca
+                max_ratio = ratio
 
+            # for cross_entropy we need the logits of y_pred_remap so applying the mapping dict
+            logits = s.cpu()#.detach().numpy() #is detaching allowed/necessary?
 
-        # for cross_entropy we need the logits of y_pred_remap so applying the mapping dict
-        logits = s.cpu()#.detach().numpy() #is detaching allowed/necessary?
+            # Create permutation index array to remap the logits
+            num_classes = logits.size(1)
+            perm = [0] * num_classes
+            for old_index, new_index in mapping.items():
+                perm[new_index] = old_index
 
-        # Create permutation index array to remap the logits
-        num_classes = logits.size(1)
-        perm = [0] * num_classes
-        for old_index, new_index in mapping.items():
-            perm[new_index] = old_index
+            # Convert to tensor and ensure it's on the same device as logits
+            perm = torch.tensor(perm, dtype=torch.long, device=logits.device)
+            # Apply permutation to logits
+            y_pred_logits_remap = logits[:, perm]
 
-        # Convert to tensor and ensure it's on the same device as logits
-        perm = torch.tensor(perm, dtype=torch.long, device=logits.device)
-        # Apply permutation to logits
-        y_pred_logits_remap = logits[:, perm]
+            # Train test splitting as an arbitrary way of limiting data
+            y_pred_logits_remap_partial = y_pred_logits_remap[mask_lab]
+            y_partial = y[mask_lab] #l_targets is a tensor, while this requires a ndarray
 
-        # Train test splitting as an arbitrary way of limiting data
-        y_pred_logits_remap_partial = y_pred_logits_remap[mask_lab]
-        y_partial = l_targets
+            total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2 = model.total_loss(
+                x=data,
+                x_bar=x_bar,
+                center=original_center,
+                target=refined_center,
+                dim=args.d,
+                n_clusters=args.n_clusters,
+                s=s,
+                index=index
+            )
 
-        total_loss, reconstr_loss, kl_loss, loss_d1, loss_d2 = model.total_loss(
-            x=data,
-            x_bar=x_bar,
-            center=original_center,
-            target=refined_center,
-            dim=args.d,
-            n_clusters=args.n_clusters,
-            s=s,
-            index=index
-        )
+            cross_loss = model.cross_loss(y_pred_logits_remap_partial,y_partial)
 
-        cross_loss = model.cross_loss(y_pred_logits_remap_partial,y_partial)
-
-        # dont forget to apply the permutation here because the latent dim. and actual labels dont necessarily match
-        pseudo_loss = model.pseudo_loss_adv2(
-            y,
+            # dont forget to apply the permutation here because the latent dim. and actual labels dont necessarily match
             # pseudo_logits[:, perm]
-            s[:, perm]
-        )
 
-        s_labeled = s[mask_lab]
-        y_labeled = torch.tensor(l_targets, device=s.device)
-        contr_loss = model.supervised_contrastive_loss(s_labeled, y_labeled) #maybe also use/add high conf pseudo labels?
-        omega = args.omega
-        total_loss  = (total_loss +
-                       args.delta * cross_loss +
-                       args.epsilon * pseudo_loss +
-                       omega * contr_loss
-                       )
+            pseudo_loss = model.pseudo_loss_S(
+                y,
+                s[:, perm]
+            )
 
-        optimizer.zero_grad()
-        total_loss.backward()
-        optimizer.step()
+            s_labeled = s[mask_lab]
+            y_labeled = torch.tensor(l_targets, device=s.device)
+            contr_loss = model.supervised_contrastive_loss(s_labeled, y_labeled) #maybe also use/add high conf pseudo labels?
 
-        if epoch_iter % 10 == 0 or epoch_iter == epochs - 1:
-            print('Iter {}'.format(epoch_iter), ':Current Acc {:.4f}'.format(acc),
-                  ':Max Acc {:.4f}'.format(accmax), ', Current nmi {:.4f}'.format(nmi),
-                  ':Max nmi {:.4f}'.format(nmimax), ', Current kappa {:.4f}'.format(kappa),
-                  ':Max kappa {:.4f}'.format(kappa_max))
-            print("total_loss", total_loss.data, "reconstr_loss", reconstr_loss.data, "kl_loss", kl_loss.data, "entropy_loss", args.delta * cross_loss.data, "pseudo_loss", args.epsilon * pseudo_loss.data, "contras_loss", omega * contr_loss.data)
-            print(ratio)
+            # fixmatch_loss = torch.tensor(0.0, device=device)
+            fixmatch_loss = train_one_epoch_fixmatch(model,u_feats, scaler, threshold=.8, device=device)
+
+            total_loss  = (total_loss +
+                           args.delta * cross_loss +
+                           args.epsilon * pseudo_loss +
+                           args.omega * contr_loss +
+                           args.delta * fixmatch_loss
+                           )
+
+            scaler.scale(total_loss).backward()
+            scaler.step(optimizer)
+            scaler.update()
+            optimizer.zero_grad()
+
+            writer.add_scalar('Loss/total', total_loss.item(), epoch_iter)
+            writer.add_scalar('Loss/reconstruction', reconstr_loss.item(), epoch_iter)
+            writer.add_scalar('Loss/kl', kl_loss.item() * args.alpha, epoch_iter)
+            writer.add_scalar('Loss/CE', cross_loss.item() * args.delta, epoch_iter)
+            writer.add_scalar('Loss/pseudo', pseudo_loss.item() * args.epsilon, epoch_iter)
+            writer.add_scalar('Loss/contrastive', contr_loss.item() * args.omega, epoch_iter)
+            writer.add_scalar('Loss/FM', fixmatch_loss.item() * args.delta, epoch_iter)
+
+            if epoch_iter % 10 == 0 or epoch_iter == epochs - 1:
+                print('[Eval]', 'Iter {}'.format(epoch_iter), ':Current Acc {:.4f}'.format(acc),
+                      ':Max Acc {:.4f}'.format(accmax), ', Current nmi {:.4f}'.format(nmi),
+                      ':Max nmi {:.4f}'.format(nmimax), ', Current kappa {:.4f}'.format(kappa),
+                      ':Max kappa {:.4f}'.format(kappa_max))
+                print(
+                    f"[Losses] | "
+                    f"total: {total_loss.data:.4f} | "
+                    f"recon: {reconstr_loss.data:.4f} | "
+                    f"kl: {kl_loss.data:.4f} | "
+                    f"entropy: {(args.delta * cross_loss.data):.4f} | "
+                    f"pseudo: {(args.epsilon * pseudo_loss.data):.4f} | "
+                    f"contras: {(args.omega * contr_loss.data):.4f} | "
+                    f"FM: {(args.delta * fixmatch_loss.data):.4f}"
+                )
+                print("[Eval]", "ratio", ratio.data)
 
     end = time.time()
+
+    writer.close()
     print('Running time: ', end - start)
+
     if args.delta != .0:
-        print(f"percentage of labeled data used: {args.label_usage} meaning {len(y_pred_logits_remap_partial)}/{len(y)} used")
+        print(f"{'percentage' if args.label_usage < 1 else 'number'} of labeled data used: {args.label_usage} meaning {len(y_pred_logits_remap_partial)}/{len(y)} used")
+
     return accmax, nmimax, kappa_max, ca_max
-
-
 
 
 if __name__ == "__main__":
@@ -531,12 +702,13 @@ if __name__ == "__main__":
     parser.add_argument('--alpha', default=3, type=float, help='the weight of kl_loss')
     parser.add_argument('--beta', default=8, type=float, help='the weight of local_loss')
     parser.add_argument('--gama', default=0.03, type=float, help='the weight of non_local_loss')
-    parser.add_argument('--delta', default=.0, type=float, help='the weight of the cross_entropy_loss')
-    parser.add_argument('--label_usage', default=.01, type=float, help='decimal deciding how much labeled data to be used during training')
-    parser.add_argument('--epsilon', default=0.0, type=float, help='the weight of the pseudo_label_loss')
+    # semi-supervised parameters
+    parser.add_argument('--label_usage', default=5, type=float, help='decimal% or absolute value of labeled data used during training')
+    parser.add_argument('--delta', default=.5, type=float, help='the weight of the cross_entropy_loss')
+    parser.add_argument('--epsilon', default=2, type=float, help='the weight of the pseudo_label_loss')
     parser.add_argument('--pseudo_threshold', default=.95, type=float, help='minimum confidence of the pseudo predications to be used')
     parser.add_argument('--topk', default=1, type=int, help="count of pseudo labels to be summed for the threshold to be met")
-    parser.add_argument('--omega', default=0.5, type=float, help='the weight of the contrastive_loss')
+    parser.add_argument('--omega', default=.5, type=float, help='the weight of the contrastive_loss')
 
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
@@ -585,7 +757,7 @@ if __name__ == "__main__":
     acc_sum = 0
     nmi_sum = 0
     kappa_sum = 0
-    rounds = 1
+    rounds = 1 # if stepping away from 1 round, unset the seeds every run
     cas = []
     for i in range(rounds):
         print("this is " + str(i) + "round")

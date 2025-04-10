@@ -37,24 +37,41 @@ class HSIRandAugment:
 
     def random_rotate(self, img, max_deg=15):
         angle = random.uniform(-max_deg, max_deg)
+        angle_rad = torch.tensor(angle * 3.1415 / 180, device=img.device)
+
+        cos_a = torch.cos(angle_rad)
+        sin_a = torch.sin(angle_rad)
+
         theta = torch.tensor([
-            [torch.cos(torch.tensor(angle * 3.1415 / 180)), -torch.sin(torch.tensor(angle * 3.1415 / 180)), 0],
-            [torch.sin(torch.tensor(angle * 3.1415 / 180)), torch.cos(torch.tensor(angle * 3.1415 / 180)), 0]
-        ], dtype=torch.float32).unsqueeze(0)
+            [cos_a, -sin_a, 0],
+            [sin_a, cos_a, 0]
+        ], dtype=torch.float32, device=img.device).unsqueeze(0)
 
         grid = F.affine_grid(theta, img.unsqueeze(0).size(), align_corners=False)
-        return F.grid_sample(img.unsqueeze(0), grid, align_corners=False, mode='bilinear', padding_mode='border').squeeze(0)
+        return F.grid_sample(img.unsqueeze(0), grid, align_corners=False, mode='bilinear',
+                             padding_mode='border').squeeze(0)
 
     def random_affine(self, img, max_deg=10, translate=0.1):
         angle = random.uniform(-max_deg, max_deg)
-        translations = [random.uniform(-translate, translate) for _ in range(2)]
+        angle_rad = torch.tensor(angle * 3.1415 / 180, device=img.device)
+
+        translations = [
+            random.uniform(-translate, translate),
+            random.uniform(-translate, translate)
+        ]
+
+        cos_a = torch.cos(angle_rad)
+        sin_a = torch.sin(angle_rad)
+
         theta = torch.tensor([
-            [torch.cos(torch.tensor(angle * 3.1415 / 180)), -torch.sin(torch.tensor(angle * 3.1415 / 180)), translations[0]],
-            [torch.sin(torch.tensor(angle * 3.1415 / 180)),  torch.cos(torch.tensor(angle * 3.1415 / 180)), translations[1]]
-        ], dtype=torch.float32).unsqueeze(0)
+            [cos_a, -sin_a, translations[0]],
+            [sin_a, cos_a, translations[1]]
+        ], dtype=torch.float32, device=img.device).unsqueeze(0)
 
         grid = F.affine_grid(theta, img.unsqueeze(0).size(), align_corners=False)
-        return F.grid_sample(img.unsqueeze(0), grid, align_corners=False, mode='bilinear', padding_mode='border').squeeze(0)
+        return F.grid_sample(img.unsqueeze(0), grid, align_corners=False, mode='bilinear',
+                             padding_mode='border').squeeze(0)
+
 
 # augment = HSIRandAugment(num_ops=2)
 # # Dataset shape: (6104, 8, 7, 7)
