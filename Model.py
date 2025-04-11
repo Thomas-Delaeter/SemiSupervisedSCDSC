@@ -104,7 +104,7 @@ class C_EDESC(nn.Module):
         nn.init.xavier_uniform_(self.D) # stable inplace init of D
         print(self.D.shape)
 
-        # augmentation functions called in foward pass
+        # augmentation functions called in foward pass, they did not really seem to help...
         self.weak_latent_aug = WeakLatentAug(noise_std=0.01, flip_prob=0.5)
         self.strong_latent_aug = StrongLatentAug(
             noise_std=0.1,
@@ -115,6 +115,11 @@ class C_EDESC(nn.Module):
             shift=True,
             flip=True
         )
+
+        # learnable weights of the loss func
+        # cross, pseudo, contrastive, fixmatch
+        # self.log_vars_semisup = nn.Parameter(torch.zeros(4))
+        self.log_vars_semisup = nn.Parameter(torch.tensor([args.delta, args.epsilon, args.omega, args.psi]))
 
         # Pseudo-Label Module
         self.pseudo_classifier = nn.Sequential(
@@ -660,40 +665,67 @@ def train_EDESC(device, i):
             fixmatch_loss =  model.fixmatch_style_loss(y, s[:,perm], pseudo_logits[:,perm], .80)
             # fixmatch_loss =  model.fixmatch_style_loss(y, s_weak[:,perm], pseudo_logits_aug[:,perm], .80)
 
-            total_loss  = (total_loss +
-                           args.delta * cross_loss +
-                           args.epsilon * pseudo_loss +
-                           args.psi * fixmatch_loss +
-                           args.omega * contr_loss
-                           )
+
+
+            # Combine the four semi-supervised losses with learned uncertainty weighting
+            semisup_losses = [cross_loss, pseudo_loss, contr_loss, fixmatch_loss]
+            weighted_semisup_loss = torch.tensor(0.0, device=device)
+
+            for i, L in enumerate(semisup_losses):
+                precision = torch.exp(-model.log_vars_semisup[i])  # = 1 / sigma_i^2
+                # Weighted Loss = precision * L + log_vars_semisup[i] for regularization
+                weighted_semisup_loss += precision * L + model.log_vars_semisup[i]
+
+            # Your normal main losses:
+            total_loss = (total_loss  # e.g. reconstruction + alpha*KL + beta*smooth
+                          + weighted_semisup_loss
+                          )
+
+            # total_loss  = (total_loss +
+            #                args.delta * cross_loss +
+            #                args.epsilon * pseudo_loss +
+            #                args.psi * fixmatch_loss +
+            #                args.omega * contr_loss
+            #                )
 
             scaler.scale(total_loss).backward()
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
 
-            writer.add_scalar('Loss/total', total_loss.item(), epoch_iter)
-            writer.add_scalar('Loss/reconstruction', reconstr_loss.item(), epoch_iter)
-            writer.add_scalar('Loss/kl', kl_loss.item() * args.alpha, epoch_iter)
-            writer.add_scalar('Loss/CE', cross_loss.item() * args.delta, epoch_iter)
-            writer.add_scalar('Loss/pseudo', pseudo_loss.item() * args.epsilon, epoch_iter)
-            writer.add_scalar('Loss/contrastive', contr_loss.item() * args.omega, epoch_iter)
-            writer.add_scalar('Loss/FM', fixmatch_loss.item() * args.psi, epoch_iter)
+            # writer.add_scalar('Loss/total', total_loss.item(), epoch_iter)
+            # writer.add_scalar('Loss/reconstruction', reconstr_loss.item(), epoch_iter)
+            # writer.add_scalar('Loss/kl', kl_loss.item() * args.alpha, epoch_iter)
+            # writer.add_scalar('Loss/CE', cross_loss.item() * args.delta, epoch_iter)
+            # writer.add_scalar('Loss/pseudo', pseudo_loss.item() * args.epsilon, epoch_iter)
+            # writer.add_scalar('Loss/contrastive', contr_loss.item() * args.omega, epoch_iter)
+            # writer.add_scalar('Loss/FM', fixmatch_loss.item() * args.psi, epoch_iter)
 
             if epoch_iter % 10 == 0 or epoch_iter == epochs - 1:
                 print('[Eval]', 'Iter {}'.format(epoch_iter), ':Current Acc {:.4f}'.format(acc),
                       ':Max Acc {:.4f}'.format(accmax), ', Current nmi {:.4f}'.format(nmi),
                       ':Max nmi {:.4f}'.format(nmimax), ', Current kappa {:.4f}'.format(kappa),
                       ':Max kappa {:.4f}'.format(kappa_max))
+                # print(
+                #     f"[Losses] | "
+                #     f"total: {total_loss.data:.4f} | "
+                #     f"recon: {reconstr_loss.data:.4f} | "
+                #     f"kl: {kl_loss.data:.4f} | "
+                #     f"entropy: {(args.delta * cross_loss.data):.4f} | "
+                #     f"pseudo: {(args.epsilon * pseudo_loss.data):.4f} | "
+                #     f"contras: {(args.omega * contr_loss.data):.4f} | "
+                #     f"FM: {(args.psi * fixmatch_loss.data):.4f}"
+                # )
+
                 print(
                     f"[Losses] | "
                     f"total: {total_loss.data:.4f} | "
                     f"recon: {reconstr_loss.data:.4f} | "
                     f"kl: {kl_loss.data:.4f} | "
-                    f"entropy: {(args.delta * cross_loss.data):.4f} | "
-                    f"pseudo: {(args.epsilon * pseudo_loss.data):.4f} | "
-                    f"contras: {(args.omega * contr_loss.data):.4f} | "
-                    f"FM: {(args.psi * fixmatch_loss.data):.4f}"
+                    f"entropy: {(cross_loss.data):.4f} | "
+                    f"pseudo: {(pseudo_loss.data):.4f} | "
+                    f"contras: {(contr_loss.data):.4f} | "
+                    f"FM: {(fixmatch_loss.data):.4f}"
                 )
                 print("[Eval]", "ratio", ratio.data)
 
@@ -701,6 +733,8 @@ def train_EDESC(device, i):
 
     writer.close()
     print('Running time: ', end - start)
+    
+    print(model.log_vars_semisup)
 
     if args.delta != .0 or args.omega != .0:
         print(f"{'percentage' if args.label_usage < 1 else 'number'} of labeled data used: {args.label_usage} meaning {len(y_pred_logits_remap_partial)}/{len(y)} used")
@@ -742,7 +776,7 @@ if __name__ == "__main__":
     # semi-supervised parameters
     parser.add_argument('--label_usage', default=1, type=float, help='decimal% or absolute value of labeled data used during training')
     parser.add_argument('--delta', default=.5, type=float, help='the weight of the cross_entropy_loss')
-    parser.add_argument('--epsilon', default=2, type=float, help='the weight of the pseudo_label_loss')
+    parser.add_argument('--epsilon', default=2 , type=float, help='the weight of the pseudo_label_loss')
     parser.add_argument('--pseudo_threshold', default=.95, type=float, help='minimum confidence of the pseudo predications to be used')
     parser.add_argument('--topk', default=1, type=int, help="count of pseudo labels to be summed for the threshold to be met")
     parser.add_argument('--psi', default=.5, type=float, help='the weight of the fixmatch-style_loss')
