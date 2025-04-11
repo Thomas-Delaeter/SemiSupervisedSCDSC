@@ -11,9 +11,13 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader, TensorDataset
 
 from attention_span_classifier import AttentionPseudoClassifier
+
 from consistency_regularization import WeakAug, HSIRandAugment
 from consistency_regularization_gpu import WeakAug as WeakAugGPU
 from consistency_regularization_gpu import HSIRandAugment as HSIRandAugGPU
+from consistency_regularization_latent import WeakLatentAug, StrongLatentAug
+
+
 from my_knn import get_initial_value
 from Auto_encoder import Ae
 from getdata import Load_my_Dataset
@@ -100,17 +104,19 @@ class C_EDESC(nn.Module):
         nn.init.xavier_uniform_(self.D) # stable inplace init of D
         print(self.D.shape)
 
-        # TODO: Pseudo-Graph Module, requires mini-batch integration
-        # Makes it O(n**2) again, so best to avoid? Though FINCH is 0(n**2) as wel
-        # proposed method uses small set of samples to train network
-        # Not end to end trainable anymore
-        # self.Coef = Parameter(torch.Tensor(batch_size,batch_size))
-        # nn.init.constant_(self.Coef, 1e-5)
+        # augmentation functions called in foward pass
+        self.weak_latent_aug = WeakLatentAug(noise_std=0.01, flip_prob=0.5)
+        self.strong_latent_aug = StrongLatentAug(
+            noise_std=0.1,
+            drop_prob=0.2,
 
-        # Depreciated: using S instead
+            # TODO:these probably do something, but i dont feel like its noticable.. even on paviaU
+            #  maybe more labeled data/finetuning the loss?
+            shift=True,
+            flip=True
+        )
+
         # Pseudo-Label Module
-        latent_dim = n_z * 7 * 7
-        # self.pseudo_classifier = nn.Linear(latent_dim, n_clusters)
         self.pseudo_classifier = nn.Sequential(
             nn.Conv2d(n_z, 64, kernel_size=3, padding=1),
             nn.BatchNorm2d(64),
@@ -136,11 +142,13 @@ class C_EDESC(nn.Module):
     def forward(self, x):
         x_bar, z = self.ae(x)
 
+        # z_weak = self.weak_latent_aug(z)
+        # z_strong = self.strong_latent_aug(z)
+
         # Pseudo Label
-        z_aug = z + torch.randn_like(z) * 0.1
-        pseudo_logits = self.pseudo_classifier(
-            z_aug
-        )
+        # z_aug = z + torch.randn_like(z) * 0.1
+        pseudo_logits = self.pseudo_classifier(z)
+        pseudo_logits_aug = None#= self.pseudo_classifier(z_strong)
 
         z_shape = z.shape
         num_ = z_shape[0]
@@ -159,7 +167,18 @@ class C_EDESC(nn.Module):
         s = (s + eta * d) / ((eta + 1) * d)
         s = (s.t() / torch.sum(s, 1)).t()
 
-        return x_bar, s, z, pseudo_logits
+        s_weak = None
+        # z_weak = z_weak.reshape((num_, -1))
+        # for i in range(self.n_clusters):
+        #     si = torch.sum(torch.pow(torch.mm(z_weak, self.D[:, i * d:(i + 1) * d]), 2), 1, keepdim=True)
+        #     if s_weak is None:
+        #         s_weak = si
+        #     else:
+        #         s_weak = torch.cat((s_weak, si), 1)
+        # s_weak = (s_weak + eta * d) / ((eta + 1) * d)
+        # s_weak = (s_weak.t() / torch.sum(s_weak, 1)).t()
+
+        return x_bar, (s, s_weak), z, (pseudo_logits, pseudo_logits_aug)
 
     def total_loss(self, x, x_bar, center, target, dim, n_clusters, s, index):
         # Reconstruction loss
@@ -255,7 +274,7 @@ class C_EDESC(nn.Module):
         cross_loss = torch.tensor(0.0, device=device)
         if args.delta != 0.0:
             cross_loss = F.cross_entropy(y_pred,
-                                     torch.from_numpy(y).long()) if not y_pred.numel() == 0 else torch.tensor(0)
+                                         torch.from_numpy(y).long()) if not y_pred.numel() == 0 else torch.tensor(0)
         return cross_loss
 
     def supervised_contrastive_loss(self, s, labels, temperature=0.5):
@@ -576,7 +595,7 @@ def train_EDESC(device, i):
     for epoch_iter in range(epochs):
 
         with autocast():
-            x_bar, s, z, pseudo_logits = model(data)
+            x_bar, (s, s_weak), z, (pseudo_logits, pseudo_logits_aug) = model(data)
 
             ratio = (s > 0.90).sum() / s.shape[0]
 
@@ -639,6 +658,7 @@ def train_EDESC(device, i):
             contr_loss = model.supervised_contrastive_loss(s_labeled, y_labeled) #maybe also use/add high conf pseudo labels?
 
             fixmatch_loss =  model.fixmatch_style_loss(y, s[:,perm], pseudo_logits[:,perm], .80)
+            # fixmatch_loss =  model.fixmatch_style_loss(y, s_weak[:,perm], pseudo_logits_aug[:,perm], .80)
 
             total_loss  = (total_loss +
                            args.delta * cross_loss +
