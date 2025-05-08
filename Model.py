@@ -436,6 +436,70 @@ def train_one_epoch_fixmatch(model, unlabeled_data, scaler, batch_size=64, thres
         return torch.tensor(0.0, device=device)
 
 
+from sklearn.neighbors import NearestNeighbors
+import numpy as np
+
+
+from sklearn.neighbors import NearestNeighbors
+import numpy as np
+import torch
+
+def generate_pseudo_labeled_data_and_shrink(
+    data: np.ndarray,
+    cluster_ids: np.ndarray,
+    mask_lab: np.ndarray,
+    true_labels: np.ndarray,
+    N: int = 5
+) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Propagate labels within each FINCH mini-cluster and
+    return the newly pseudo-labeled features & targets and shrunk unlabeled features.
+
+    Parameters
+    ----------
+    data         : (num_samples, feat_dim) full feature matrix (numpy)
+    cluster_ids  : (num_samples,)       FINCH cluster assignment for each sample
+    mask_lab     : (num_samples,) bool  True for originally labeled samples
+    true_labels  : (num_samples,)       original labels at mask_lab positions
+    N            : int                  how many unlabeled neighbors to grab per labeled point
+
+    Returns:
+      new_feats   : (M, D) numpy of newly pseudo-labeled features
+      new_targets : (M,)  numpy of their labels
+      remain_feats: (U-M, D) numpy of the unlabeled features left over
+    """
+    # propagate exactly as before
+    pseudo = -1 * np.ones_like(true_labels, dtype=int)
+    pseudo[mask_lab] = true_labels[mask_lab]
+    for c in np.unique(cluster_ids):
+        idx_c     = np.where(cluster_ids == c)[0]
+        lab_idx   = idx_c[mask_lab[idx_c]]
+        unlab_idx = idx_c[~mask_lab[idx_c]]
+        if not len(lab_idx) or not len(unlab_idx):
+            continue
+        feats_lab   = data[lab_idx].reshape(len(lab_idx), -1)
+        feats_unlab = data[unlab_idx].reshape(len(unlab_idx), -1)
+        nn = NearestNeighbors(n_neighbors=min(N, feats_unlab.shape[0]),
+                              algorithm="auto").fit(feats_unlab.cpu())
+        _, nbrs = nn.kneighbors(feats_lab.cpu())
+        for i, li in enumerate(lab_idx):
+            pseudo[unlab_idx[nbrs[i]]] = true_labels[li]
+
+    # which unlabeled got labels?
+    all_unlab       = np.where(~mask_lab)[0]
+    got_label_mask  = (pseudo[all_unlab] != -1)
+    new_idx_global  = all_unlab[got_label_mask]
+    remain_idx      = all_unlab[~got_label_mask]
+
+    new_feats   = data[new_idx_global]
+    new_targets = pseudo[new_idx_global]
+    remain_feats= data[remain_idx]
+
+    return new_feats, new_targets, remain_feats
+
+
+
+
 def train_EDESC(device, i):
 
     start = time.time()
@@ -465,8 +529,8 @@ def train_EDESC(device, i):
     c, num_clust, req_c1 = FINCH(data)
     req_c = c[:, args.hierarchy]
 
-    model.pretrain(f'original_weight/{args.dataset}.pkl')
     # model.pretrain('') # empty path will pretrain again
+    model.pretrain(f'original_weight/{args.dataset}.pkl')
 
     optimizer = Adam(model.parameters(), lr=args.lr)
     model.optimizer = optimizer
@@ -482,6 +546,26 @@ def train_EDESC(device, i):
     # TODO: chances are that not all classes are within the l_feats selection for percentage wise selection
     u_feats, l_feats, l_targets, mask_lab = get_labeled_data_strat(y, data, args.label_usage, seed)
     # print("mask;", np.where(mask_lab)[0])
+
+    # expanding l_feats based on nearest neighbors in FINCH-clusters
+    pseudo_feats, pseudo_targets, shrunk_u_feats = generate_pseudo_labeled_data_and_shrink(
+        data.reshape(dataset.__len__(), -1),
+        cluster_ids=req_c,
+        mask_lab=mask_lab,
+        true_labels=np.where(mask_lab, y, -1),
+        N=(args.label_usage if args.label_usage >= 1 else (data.y.shape[0] * args.label_usage) / args.n_clusters)
+    )
+
+    # pseudo_feats = torch.from_numpy(pseudo_feats).to(device)
+    # pseudo_targets = torch.from_numpy(pseudo_targets).long().to(device)
+
+    l_feats = torch.cat([l_feats, pseudo_feats], dim=0)
+    l_targets = torch.concatenate([l_targets, pseudo_targets], dim=0)
+    print(f"Extended labeled set: {l_feats.size(0)} samples ",
+          f"({dataset.__len__() - u_feats.size(0)} real + {pseudo_feats.size(0)} pseudo)")
+    u_feats = shrunk_u_feats
+
+
 
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=30, random_state=seed)
     y_pred = kmeans.fit_predict(hidden.data.cpu().numpy().reshape(dataset.__len__(), -1))
@@ -615,14 +699,6 @@ def train_EDESC(device, i):
             scaler.update()
             optimizer.zero_grad()
 
-            # writer.add_scalar('Loss/total', total_loss.item(), epoch_iter)
-            # writer.add_scalar('Loss/reconstruction', reconstr_loss.item(), epoch_iter)
-            # writer.add_scalar('Loss/kl', kl_loss.item() * args.alpha, epoch_iter)
-            # writer.add_scalar('Loss/CE', cross_loss.item() * args.delta, epoch_iter)
-            # writer.add_scalar('Loss/pseudo', pseudo_loss.item() * args.epsilon, epoch_iter)
-            # writer.add_scalar('Loss/contrastive', contr_loss.item() * args.omega, epoch_iter)
-            # writer.add_scalar('Loss/FM', fixmatch_loss.item() * args.psi, epoch_iter)
-
             if epoch_iter % 10 == 0 or epoch_iter == epochs - 1:
                 print('[Eval]', 'Iter {}'.format(epoch_iter), ':Current Acc {:.4f}'.format(acc),
                       ':Max Acc {:.4f}'.format(accmax), ', Current nmi {:.4f}'.format(nmi),
@@ -639,16 +715,6 @@ def train_EDESC(device, i):
                     f"FM: {(args.psi * fixmatch_loss.data):.4f}"
                 )
 
-                # print(
-                #     f"[Losses] | "
-                #     f"total: {total_loss.data:.4f} | "
-                #     f"recon: {reconstr_loss.data:.4f} | "
-                #     f"kl: {kl_loss.data:.4f} | "
-                #     f"entropy: {(cross_loss.data):.4f} | "
-                #     f"pseudo: {(pseudo_loss.data):.4f} | "
-                #     f"contras: {(contr_loss.data):.4f} | "
-                #     f"FM: {(fixmatch_loss.data):.4f}"
-                # )
                 print("[Eval]", "ratio", ratio.data)
 
     end = time.time()
