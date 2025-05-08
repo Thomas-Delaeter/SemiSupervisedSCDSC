@@ -236,7 +236,7 @@ class C_EDESC(nn.Module):
         if args.epsilon == 0.0:
             return pseudo_loss
 
-        # s already provides some kind of distribution so just normalizing
+        # s already provides some kind of distribution so just normalizing because it seemed to give errors
         pseudo_probs = pseudo_logits
         pseudo_probs = pseudo_probs / pseudo_logits.sum(dim=1, keepdim=True)
 
@@ -376,78 +376,6 @@ def pretrain_ae(model):
         torch.save(model.state_dict(), args.pretrain_path)
     print("Model saved to {}.".format(args.pretrain_path))
 
-def train_one_epoch_fixmatch_minibatched(model, unlabeled_data, scaler, batch_size=64, threshold=0.95, temperature=1.0, device='cuda:0'):
-    """
-    Apply FixMatch-style training for one epoch.
-
-    Args:
-        model (C_EDESC): The model to train.
-        unlabeled_data (Tensor): Tensor of shape [N, C, H, W].
-        threshold (float): Confidence threshold for pseudo-labeling.
-        temperature (float): Softmax temperature scaling.
-        device (str): Device to run computations on.
-
-    Returns:
-        fixmatch_loss (torch.Tensor): Average FixMatch loss for this epoch.
-    """
-
-    # stopped developing this function, depreciated
-
-    model.train()
-
-    # weak_aug = WeakAug()
-    # strong_aug = HSIRandAugment()
-
-    weak_aug = WeakAugGPU()
-    strong_aug = HSIRandAugGPU()
-
-    # Wrap tensor in a Dataset and create DataLoader
-    unlabeled_dataset = TensorDataset(unlabeled_data)
-    loader = DataLoader(unlabeled_dataset, batch_size=batch_size, shuffle=True)
-
-    total_loss = 0.
-    total_count = 0
-
-    for (x_batch,) in loader:
-        x_batch = x_batch.to(device)
-
-        # Apply weak and strong augmentations
-        # weak_batch = torch.stack([weak_aug(x.clone().to(device)) for x in x_batch])
-        # strong_batch = torch.stack([strong_aug(x.clone().to(device)) for x in x_batch])
-        weak_batch = weak_aug(x_batch)
-        strong_batch = strong_aug(x_batch)
-
-        # Forward weakly augmented batch for pseudo-labels
-        with autocast():
-            _, s_weak, _, _ = model(weak_batch)
-            probs = F.softmax(s_weak / temperature, dim=1)
-            max_probs, pseudo_labels = torch.max(probs, dim=1)
-
-            mask = max_probs >= threshold
-
-            if mask.sum() == 0:
-                continue  # Skip this batch if no confident pseudo-labels
-
-            # Forward strongly augmented inputs
-            _, s_strong, _, _ = model(strong_batch[mask])
-
-            loss = F.cross_entropy(s_strong, pseudo_labels[mask])
-            total_loss += loss.item() * mask.sum().item()
-            total_count += mask.sum().item()
-
-        # Backprop
-        scaler.scale(loss).backward()
-        scaler.step(model.optimizer)
-        scaler.update()
-        model.optimizer.zero_grad()
-
-    # Normalize total loss
-    if total_count > 0:
-        print(f"[FM] No samples met {threshold} threshold. Max sum: {max_probs.max():.4f}")
-        return torch.tensor(total_loss / total_count)
-    else:
-        print(f"skipped fixmatch")
-        return torch.tensor(0.0, device=device)
 def train_one_epoch_fixmatch(model, unlabeled_data, scaler, batch_size=64, threshold=0.95, temperature=1.0, device='cuda:0'):
     """
     Apply FixMatch-style training for one epoch.
@@ -479,8 +407,6 @@ def train_one_epoch_fixmatch(model, unlabeled_data, scaler, batch_size=64, thres
         x_batch = x_batch.to(device)
 
         # Apply weak and strong augmentations
-        # weak_batch = torch.stack([weak_aug(x.clone().to(device)) for x in x_batch])
-        # strong_batch = torch.stack([strong_aug(x.clone().to(device)) for x in x_batch])
         weak_batch = weak_aug(x_batch)
         strong_batch = strong_aug(x_batch)
 
@@ -545,9 +471,6 @@ def train_EDESC(device, i):
     optimizer = Adam(model.parameters(), lr=args.lr)
     model.optimizer = optimizer
 
-    # optimizer_classifier = Adam(model.pseudo_classifier.parameters(), lr=args.lr)
-    # optimizer_clustering = Adam([model.D], lr=args.lr)
-
     scaler = GradScaler()
 
     index = dataset.index
@@ -555,14 +478,14 @@ def train_EDESC(device, i):
     data = torch.Tensor(data).to(device)
     x_bar, hidden = get_initial_value(model, data)
 
-    print(f'seed: {np.random.get_state()[1][0]}')
+    # print(f'seed: {np.random.get_state()[1][0]}')
     # TODO: chances are that not all classes are within the l_feats selection for percentage wise selection
     u_feats, l_feats, l_targets, mask_lab = get_labeled_data_strat(y, data, args.label_usage, seed)
-    print("mask;", np.where(mask_lab)[0])
+    # print("mask;", np.where(mask_lab)[0])
 
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=30, random_state=seed)
     y_pred = kmeans.fit_predict(hidden.data.cpu().numpy().reshape(dataset.__len__(), -1))
-    print("Initial Cluster Centers: ", y_pred)
+    # print("Initial Cluster Centers: ", y_pred)
 
     kmeans = SemiSupKMeans(k=args.n_clusters, tolerance=1e-4, max_iterations=300, init='k-means++',
                            n_init=30, random_state=seed, n_jobs=-1, pairwise_batch_size=1024,
@@ -573,15 +496,15 @@ def train_EDESC(device, i):
     l_targets = torch.tensor(l_targets)
 
     kmeans.fit_mix(u_feats.view(u_feats.size(0), -1), l_feats.view(l_feats.size(0), -1), l_targets)
-    all_preds = kmeans.labels_.cpu().numpy()
+    y_pred_sskm = kmeans.labels_.cpu().numpy()
 
     print(f"kmeans: {accuracy_score(y_pred, y)}")
-    print(f"sskmeans both: {accuracy_score(all_preds, y)}")
+    print(f"sskmeans both: {accuracy_score(y_pred_sskm, y)}")
 
     # TODO: ss-k-means does not increase performance at all
-    #  further more it is also inconsistent in being better for more labeled data...
-    #  maybe if labeled data is an absolute value per class
-    y_pred = all_preds
+    #  maybe a toggle to use the one which is greater?
+    #  Though shouldnt ss-k-m be always superior because labels
+    y_pred = y_pred_sskm
 
     # Initialize D
     D = Initialization_D(hidden.reshape(dataset.__len__(), -1), y_pred, args.n_clusters, args.d)
@@ -620,7 +543,7 @@ def train_EDESC(device, i):
                 max_ratio = ratio
 
             # for cross_entropy we need the logits of y_pred_remap so applying the mapping dict
-            logits = s.cpu()#.detach().numpy() #is detaching allowed/necessary?
+            logits = s.cpu()
 
             # Create permutation index array to remap the logits
             num_classes = logits.size(1)
@@ -648,25 +571,25 @@ def train_EDESC(device, i):
                 index=index
             )
 
+            cross_loss = torch.tensor(0.0)
             cross_loss = model.cross_loss(y_pred_logits_remap_partial,y_partial)
 
-            # # dont forget to apply the permutation here because the latent dim. and actual labels dont necessarily match
-            # # pseudo_logits[:, perm]
-            #
-            pseudo_loss = torch.tensor(0.0)
-            fixmatch_loss = torch.tensor(0.0)
-            pseudo_loss = model.pseudo_loss_S(
-                y,
-                s[:, perm]
-            )
+            # dont forget to apply the permutation here because the latent dim. and actual labels dont necessarily match
+            # pseudo_logits[:, perm]
 
-            #
+            pseudo_loss = torch.tensor(0.0)
+            pseudo_loss = model.pseudo_loss_S(y,s[:, perm])
+
+            contr_loss = torch.tensor(0.0)
             s_labeled = s[mask_lab]
             y_labeled = torch.tensor(l_targets, device=s.device)
-            contr_loss = model.supervised_contrastive_loss(s_labeled, y_labeled) #maybe also use/add high conf pseudo labels?
-            #
+            #maybe also use/add high conf pseudo labels?
+            contr_loss = model.supervised_contrastive_loss(s_labeled, y_labeled)
+
+            fixmatch_loss = torch.tensor(0.0)
+            # augmentations on the soft-assignment matrix or latent dimension did not seem to help
+            # fixmatch_loss =  model.fixmatch_style_loss(y, s_weak[:,perm], pseudo_logits_aug[:,perm], .80)
             fixmatch_loss =  model.fixmatch_style_loss(y, s[:,perm], pseudo_logits[:,perm], .80)
-            # # fixmatch_loss =  model.fixmatch_style_loss(y, s_weak[:,perm], pseudo_logits_aug[:,perm], .80)
 
 
             # Combine the four semi-supervised losses with learned uncertainty weighting
@@ -677,11 +600,8 @@ def train_EDESC(device, i):
             #     precision = torch.exp(-model.log_vars_semisup[i])  # = 1 / sigma_i^2
             #     # Weighted Loss = precision * L + log_vars_semisup[i] for regularization
             #     weighted_semisup_loss += precision * L + model.log_vars_semisup[i]
+            # total_loss = (total_loss  + weighted_semisup_loss)
 
-            # Your normal main losses:
-            # total_loss = (total_loss  # e.g. reconstruction + alpha*KL + beta*smooth
-            #               + weighted_semisup_loss
-            #               )
 
             total_loss  = (total_loss +
                            args.delta * cross_loss +
@@ -690,25 +610,10 @@ def train_EDESC(device, i):
                            args.omega * contr_loss
                            )
 
-            # als multi optimizerl gebruiken dan zero loss kopelen met s.sum()*.0 zodanig dat graph verbonden
-            # blijft maar die run is dan "useless", natuurlijk ok want pseudo_label ging niet boven thresh
-            # dus er ging sws niet gebeuren
-
             scaler.scale(total_loss).backward()
-            # scaler.scale(total_loss).backward(retain_graph=True)
-            # scaler.scale(fixmatch_loss).backward()
-            # scaler.scale(pseudo_loss).backward()
-
             scaler.step(optimizer)
-            # if any(p.grad is not None for p in model.pseudo_classifier.parameters()):
-            #     scaler.step(optimizer_classifier)
-            # if any(p.grad is not None for p in [model.D]):
-            #     scaler.step(optimizer_clustering)
-
             scaler.update()
             optimizer.zero_grad()
-            # optimizer_classifier.zero_grad()
-            # optimizer_clustering.zero_grad()
 
             # writer.add_scalar('Loss/total', total_loss.item(), epoch_iter)
             # writer.add_scalar('Loss/reconstruction', reconstr_loss.item(), epoch_iter)
@@ -751,7 +656,7 @@ def train_EDESC(device, i):
     writer.close()
     print('Running time: ', end - start)
 
-    # uncertainty weighting weights
+    # uncertainty weighting values
     # print(model.log_vars_semisup)
 
 
