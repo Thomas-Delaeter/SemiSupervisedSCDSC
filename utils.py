@@ -78,6 +78,13 @@ def ascii_histogram(labels, max_bar_width=50):
         print(f"{str(label):>5}: {bar} ({count})")
 
 def get_labeled_data(y, X, label_size = 3, random_state = 42):
+    """
+    Splits X, y into labeled and unlabeled sets.
+    If 0 < label_size < 1: treats as fraction of total samples.
+    If label_size >= 1: treats as number of labels *per class*, and
+        uses a fixed random permutation per class so that increasing
+        label_size simply extends the prefix of that permutation.
+    """
 
     if label_size < 1:
         # passed as decimal number: 0.01 = 1% labeled data used
@@ -102,36 +109,106 @@ def get_labeled_data(y, X, label_size = 3, random_state = 42):
         return u_feats, l_feats, l_targets, mask_lab
 
     else:
-        # number of labeled examples per class
-        num_labeled_per_class = label_size
 
-        # Resetting them here because python scope is funky
-        torch.manual_seed(random_state)
-        np.random.seed(random_state)
+        rng = np.random.RandomState(random_state)
 
-        # get all unique class labels
+        # fixed number per class, but incremental via prefix of a permuted list
+        num_labeled_per_class = int(label_size)
+
         unique_classes = np.unique(y)
-
-        # Initialize all False
-        # mask_lab = torch.zeros(len(y),dtype=torch.bool)
         mask_lab = np.zeros(len(y), dtype=bool)
 
         for cls in unique_classes:
             cls_indices = np.where(y == cls)[0]
 
-            if len(cls_indices) >= num_labeled_per_class:
-                selected = np.random.choice(cls_indices, num_labeled_per_class, replace=False)
-            else:
-                raise ValueError(f"Class {cls} has fewer than {num_labeled_per_class} samples.")
+            if len(cls_indices) < num_labeled_per_class:
+                raise ValueError(
+                    f"Class {cls} has only {len(cls_indices)} samples, "
+                    f"but {num_labeled_per_class} were requested."
+                )
 
+            # numpy permutation of that class’s indices
+            perm = rng.permutation(cls_indices)
+            selected = perm[:num_labeled_per_class]
             mask_lab[selected] = True
 
-        # Create labeled and unlabeled datasets
-        l_feats = X[mask_lab]
+        # If X is a torch.Tensor, convert the mask to torch; otherwise numpy works
+        if isinstance(X, torch.Tensor):
+            torch_mask = torch.from_numpy(mask_lab)
+            l_feats = X[torch_mask]
+            u_feats = X[~torch_mask]
+        else:
+            l_feats = X[mask_lab]
+            u_feats = X[~mask_lab]
+
         l_targets = y[mask_lab]
-        u_feats = X[~mask_lab]
 
         return u_feats, l_feats, l_targets, mask_lab
+
+import torch
+import numpy as np
+
+def get_labeled_data_strat(y, X, label_size=3, random_state=42):
+    """
+    Splits X, y into labeled and unlabeled sets.
+    If 0 < label_size < 1: percentage‐based random sampling.
+    If label_size >= 1: draws 'label_size' samples per class by:
+       1) sorting that class’s indices in dataset order
+       2) splitting them into label_size bins
+       3) picking one random index from each bin
+    """
+    # one RNG for this call
+    rng = np.random.RandomState(random_state)
+
+    if label_size < 1:
+        # ... your existing percentage branch unchanged ...
+        label_pct = label_size
+        indices = rng.permutation(len(y))
+        train_size = int(label_pct * len(y))
+        train_indices = indices[:train_size]
+
+        mask_lab = torch.zeros(len(y), dtype=torch.bool)
+        mask_lab[train_indices] = True
+
+        u_feats = X[~mask_lab]
+        l_feats = X[mask_lab]
+        l_targets = y[mask_lab]
+        return u_feats, l_feats, l_targets, mask_lab
+
+    else:
+        # stratified *within* each class
+        num_per_class = int(label_size)
+        unique_classes = np.unique(y)
+        mask_lab = np.zeros(len(y), dtype=bool)
+
+        for cls in unique_classes:
+            cls_idx = np.where(y == cls)[0]
+            if len(cls_idx) < num_per_class:
+                raise ValueError(
+                    f"Class {cls} has only {len(cls_idx)} samples, "
+                    f"but {num_per_class} were requested."
+                )
+
+            # sort by dataset order to define strata
+            cls_idx_sorted = np.sort(cls_idx)
+
+            # split into `num_per_class` bins (as even as possible)
+            strata = np.array_split(cls_idx_sorted, num_per_class)
+
+            # pick one random index from each stratum
+            picks = [int(rng.choice(bin_)) for bin_ in strata if len(bin_) > 0]
+            mask_lab[picks] = True
+
+        # build your labeled / unlabeled sets
+        if isinstance(X, torch.Tensor):
+            tm = torch.from_numpy(mask_lab)
+            l_feats, u_feats = X[tm], X[~tm]
+        else:
+            l_feats, u_feats = X[mask_lab], X[~mask_lab]
+
+        l_targets = y[mask_lab]
+        return u_feats, l_feats, l_targets, mask_lab
+
 
 
 

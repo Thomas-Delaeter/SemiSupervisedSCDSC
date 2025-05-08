@@ -9,6 +9,7 @@ import torch.nn.functional as F
 from torch.nn.parameter import Parameter
 from torch.optim import Adam
 from torch.utils.data import DataLoader, TensorDataset
+from sklearn.metrics import confusion_matrix
 
 from attention_span_classifier import AttentionPseudoClassifier
 
@@ -21,7 +22,7 @@ from consistency_regularization_latent import WeakLatentAug, StrongLatentAug
 from my_knn import get_initial_value
 from Auto_encoder import Ae
 from getdata import Load_my_Dataset
-from utils import cluster_accuracy, ascii_histogram, get_labeled_data
+from utils import cluster_accuracy, ascii_histogram, get_labeled_data, get_labeled_data_strat
 import warnings
 from Initialize_D import Initialization_D
 from Constraint import D_constraint1, D_constraint2
@@ -543,6 +544,10 @@ def train_EDESC(device, i):
 
     optimizer = Adam(model.parameters(), lr=args.lr)
     model.optimizer = optimizer
+
+    # optimizer_classifier = Adam(model.pseudo_classifier.parameters(), lr=args.lr)
+    # optimizer_clustering = Adam([model.D], lr=args.lr)
+
     scaler = GradScaler()
 
     index = dataset.index
@@ -552,36 +557,31 @@ def train_EDESC(device, i):
 
     print(f'seed: {np.random.get_state()[1][0]}')
     # TODO: chances are that not all classes are within the l_feats selection for percentage wise selection
-    u_feats, l_feats, l_targets, mask_lab = get_labeled_data(y, data, args.label_usage, seed)
+    u_feats, l_feats, l_targets, mask_lab = get_labeled_data_strat(y, data, args.label_usage, seed)
+    print("mask;", np.where(mask_lab)[0])
 
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=30, random_state=seed)
     y_pred = kmeans.fit_predict(hidden.data.cpu().numpy().reshape(dataset.__len__(), -1))
     print("Initial Cluster Centers: ", y_pred)
 
-    # kmeans = SemiSupKMeans(k=args.n_clusters, tolerance=1e-4, max_iterations=300, init='k-means++',
-    #                        n_init=30, random_state=seed, n_jobs=-1, pairwise_batch_size=1024,
-    #                        mode=None)
+    kmeans = SemiSupKMeans(k=args.n_clusters, tolerance=1e-4, max_iterations=300, init='k-means++',
+                           n_init=30, random_state=seed, n_jobs=-1, pairwise_batch_size=1024,
+                           mode=None)
 
     u_feats = torch.tensor(u_feats, dtype=torch.float32)
     l_feats = torch.tensor(l_feats, dtype=torch.float32)
     l_targets = torch.tensor(l_targets)
 
-
-    # u_feats = u_feats.view(u_feats.size(0), -1) #currently using u_feats for mixmatch, so if ss-k-means becomes relevant find fix for this
-    # l_feats = l_feats.view(l_feats.size(0), -1)
-
-    # kmeans.fit_mix(u_feats, l_feats, l_targets)
-    # all_preds = kmeans.labels_.cpu().numpy()
+    kmeans.fit_mix(u_feats.view(u_feats.size(0), -1), l_feats.view(l_feats.size(0), -1), l_targets)
+    all_preds = kmeans.labels_.cpu().numpy()
 
     print(f"kmeans: {accuracy_score(y_pred, y)}")
-    # print(f"sskmeans unlabelled: {accuracy_score(all_preds[~mask_lab], y[~mask_lab])}")
-    # print(f"sskmeans labelled: {accuracy_score(all_preds[mask_lab], l_targets)}")
-    # print(f"sskmeans both: {accuracy_score(all_preds, y)}")
+    print(f"sskmeans both: {accuracy_score(all_preds, y)}")
 
     # TODO: ss-k-means does not increase performance at all
     #  further more it is also inconsistent in being better for more labeled data...
     #  maybe if labeled data is an absolute value per class
-    # y_pred = all_preds
+    y_pred = all_preds
 
     # Initialize D
     D = Initialization_D(hidden.reshape(dataset.__len__(), -1), y_pred, args.n_clusters, args.d)
@@ -650,48 +650,65 @@ def train_EDESC(device, i):
 
             cross_loss = model.cross_loss(y_pred_logits_remap_partial,y_partial)
 
-            # dont forget to apply the permutation here because the latent dim. and actual labels dont necessarily match
-            # pseudo_logits[:, perm]
-
+            # # dont forget to apply the permutation here because the latent dim. and actual labels dont necessarily match
+            # # pseudo_logits[:, perm]
+            #
+            pseudo_loss = torch.tensor(0.0)
+            fixmatch_loss = torch.tensor(0.0)
             pseudo_loss = model.pseudo_loss_S(
                 y,
                 s[:, perm]
             )
 
+            #
             s_labeled = s[mask_lab]
             y_labeled = torch.tensor(l_targets, device=s.device)
             contr_loss = model.supervised_contrastive_loss(s_labeled, y_labeled) #maybe also use/add high conf pseudo labels?
-
+            #
             fixmatch_loss =  model.fixmatch_style_loss(y, s[:,perm], pseudo_logits[:,perm], .80)
-            # fixmatch_loss =  model.fixmatch_style_loss(y, s_weak[:,perm], pseudo_logits_aug[:,perm], .80)
-
+            # # fixmatch_loss =  model.fixmatch_style_loss(y, s_weak[:,perm], pseudo_logits_aug[:,perm], .80)
 
 
             # Combine the four semi-supervised losses with learned uncertainty weighting
-            semisup_losses = [cross_loss, pseudo_loss, contr_loss, fixmatch_loss]
-            weighted_semisup_loss = torch.tensor(0.0, device=device)
+            # semisup_losses = [cross_loss, pseudo_loss, contr_loss, fixmatch_loss]
+            # weighted_semisup_loss = torch.tensor(0.0, device=device)
 
-            for i, L in enumerate(semisup_losses):
-                precision = torch.exp(-model.log_vars_semisup[i])  # = 1 / sigma_i^2
-                # Weighted Loss = precision * L + log_vars_semisup[i] for regularization
-                weighted_semisup_loss += precision * L + model.log_vars_semisup[i]
+            # for i, L in enumerate(semisup_losses):
+            #     precision = torch.exp(-model.log_vars_semisup[i])  # = 1 / sigma_i^2
+            #     # Weighted Loss = precision * L + log_vars_semisup[i] for regularization
+            #     weighted_semisup_loss += precision * L + model.log_vars_semisup[i]
 
             # Your normal main losses:
-            total_loss = (total_loss  # e.g. reconstruction + alpha*KL + beta*smooth
-                          + weighted_semisup_loss
-                          )
+            # total_loss = (total_loss  # e.g. reconstruction + alpha*KL + beta*smooth
+            #               + weighted_semisup_loss
+            #               )
 
-            # total_loss  = (total_loss +
-            #                args.delta * cross_loss +
-            #                args.epsilon * pseudo_loss +
-            #                args.psi * fixmatch_loss +
-            #                args.omega * contr_loss
-            #                )
+            total_loss  = (total_loss +
+                           args.delta * cross_loss +
+                           args.epsilon * pseudo_loss +
+                           args.psi * fixmatch_loss +
+                           args.omega * contr_loss
+                           )
+
+            # als multi optimizerl gebruiken dan zero loss kopelen met s.sum()*.0 zodanig dat graph verbonden
+            # blijft maar die run is dan "useless", natuurlijk ok want pseudo_label ging niet boven thresh
+            # dus er ging sws niet gebeuren
 
             scaler.scale(total_loss).backward()
+            # scaler.scale(total_loss).backward(retain_graph=True)
+            # scaler.scale(fixmatch_loss).backward()
+            # scaler.scale(pseudo_loss).backward()
+
             scaler.step(optimizer)
+            # if any(p.grad is not None for p in model.pseudo_classifier.parameters()):
+            #     scaler.step(optimizer_classifier)
+            # if any(p.grad is not None for p in [model.D]):
+            #     scaler.step(optimizer_clustering)
+
             scaler.update()
             optimizer.zero_grad()
+            # optimizer_classifier.zero_grad()
+            # optimizer_clustering.zero_grad()
 
             # writer.add_scalar('Loss/total', total_loss.item(), epoch_iter)
             # writer.add_scalar('Loss/reconstruction', reconstr_loss.item(), epoch_iter)
@@ -706,35 +723,46 @@ def train_EDESC(device, i):
                       ':Max Acc {:.4f}'.format(accmax), ', Current nmi {:.4f}'.format(nmi),
                       ':Max nmi {:.4f}'.format(nmimax), ', Current kappa {:.4f}'.format(kappa),
                       ':Max kappa {:.4f}'.format(kappa_max))
-                # print(
-                #     f"[Losses] | "
-                #     f"total: {total_loss.data:.4f} | "
-                #     f"recon: {reconstr_loss.data:.4f} | "
-                #     f"kl: {kl_loss.data:.4f} | "
-                #     f"entropy: {(args.delta * cross_loss.data):.4f} | "
-                #     f"pseudo: {(args.epsilon * pseudo_loss.data):.4f} | "
-                #     f"contras: {(args.omega * contr_loss.data):.4f} | "
-                #     f"FM: {(args.psi * fixmatch_loss.data):.4f}"
-                # )
-
                 print(
                     f"[Losses] | "
                     f"total: {total_loss.data:.4f} | "
                     f"recon: {reconstr_loss.data:.4f} | "
                     f"kl: {kl_loss.data:.4f} | "
-                    f"entropy: {(cross_loss.data):.4f} | "
-                    f"pseudo: {(pseudo_loss.data):.4f} | "
-                    f"contras: {(contr_loss.data):.4f} | "
-                    f"FM: {(fixmatch_loss.data):.4f}"
+                    f"entropy: {(args.delta * cross_loss.data):.4f} | "
+                    f"pseudo: {(args.epsilon * pseudo_loss.data):.4f} | "
+                    f"contras: {(args.omega * contr_loss.data):.4f} | "
+                    f"FM: {(args.psi * fixmatch_loss.data):.4f}"
                 )
+
+                # print(
+                #     f"[Losses] | "
+                #     f"total: {total_loss.data:.4f} | "
+                #     f"recon: {reconstr_loss.data:.4f} | "
+                #     f"kl: {kl_loss.data:.4f} | "
+                #     f"entropy: {(cross_loss.data):.4f} | "
+                #     f"pseudo: {(pseudo_loss.data):.4f} | "
+                #     f"contras: {(contr_loss.data):.4f} | "
+                #     f"FM: {(fixmatch_loss.data):.4f}"
+                # )
                 print("[Eval]", "ratio", ratio.data)
 
     end = time.time()
 
     writer.close()
     print('Running time: ', end - start)
-    
-    print(model.log_vars_semisup)
+
+    # uncertainty weighting weights
+    # print(model.log_vars_semisup)
+
+
+    cm = confusion_matrix(y, y_pred_remap)
+    labels = np.unique(np.concatenate([y, y_pred_remap]))
+    print("Confusion Matrix:")
+    # header row
+    print("\t" + "\t".join(str(l) for l in labels))
+    # each row: true label, then counts per predicted label
+    for true_label, row in zip(labels, cm):
+        print(f"{true_label}\t" + "\t".join(str(v) for v in row))
 
     if args.delta != .0 or args.omega != .0:
         print(f"{'percentage' if args.label_usage < 1 else 'number'} of labeled data used: {args.label_usage} meaning {len(y_pred_logits_remap_partial)}/{len(y)} used")
@@ -774,13 +802,13 @@ if __name__ == "__main__":
     parser.add_argument('--beta', default=8, type=float, help='the weight of local_loss')
     parser.add_argument('--gama', default=0.03, type=float, help='the weight of non_local_loss')
     # semi-supervised parameters
-    parser.add_argument('--label_usage', default=1, type=float, help='decimal% or absolute value of labeled data used during training')
+    parser.add_argument('--label_usage', default=4, type=float, help='decimal% or absolute value of labeled data used during training')
     parser.add_argument('--delta', default=.5, type=float, help='the weight of the cross_entropy_loss')
-    parser.add_argument('--epsilon', default=2 , type=float, help='the weight of the pseudo_label_loss')
-    parser.add_argument('--pseudo_threshold', default=.95, type=float, help='minimum confidence of the pseudo predications to be used')
-    parser.add_argument('--topk', default=1, type=int, help="count of pseudo labels to be summed for the threshold to be met")
-    parser.add_argument('--psi', default=.5, type=float, help='the weight of the fixmatch-style_loss')
-    parser.add_argument('--omega', default=.5, type=float, help='the weight of the contrastive_loss')
+    parser.add_argument('--epsilon', default=2 , type=float, help='the weight of the pseudo_label_loss') #2
+    parser.add_argument('--pseudo_threshold', default=.95, type=float, help='minimum confidence of the pseudo predications to be used') #.95
+    parser.add_argument('--topk', default=1, type=int, help="count of pseudo labels to be summed for the threshold to be met") #1
+    parser.add_argument('--psi', default=.4, type=float, help='the weight of the fixmatch-style_loss') #.5
+    parser.add_argument('--omega', default=.3, type=float, help='the weight of the contrastive_loss') #.5
 
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
@@ -821,6 +849,13 @@ if __name__ == "__main__":
         dataset = Load_my_Dataset("C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/pavia/PaviaU.mat",
                                   "C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/pavia/PaviaU_gt.mat")
         args.num_sample = dataset.__len__()
+    elif args.dataset == 'indian':
+        args.pretrain_path = 'original_weight/indian_pines.pkl'
+        args.n_clusters = 16
+        args.n_input = 8
+        args.image_size = [145, 145]
+        dataset = Load_my_Dataset("C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/extra/indian_pines/Indian_pines.mat",
+                                  "C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/extra/indian_pines/Indian_pines_gt.mat",)
 
     print(args)
     bestacc = 0
