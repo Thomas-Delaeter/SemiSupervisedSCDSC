@@ -435,69 +435,47 @@ def train_one_epoch_fixmatch(model, unlabeled_data, scaler, batch_size=64, thres
     else:
         return torch.tensor(0.0, device=device)
 
-
 from sklearn.neighbors import NearestNeighbors
 import numpy as np
 
+def generate_cluster_pseudo_labels(
+    data_all,        # np.ndarray, shape (num_samples, feat_dim)
+    cluster_ids,     # array-like, shape (num_samples,)
+    mask_lab,        # bool array, True for labeled
+    true_labels,     # int array, ground truth for labeled (junk/–1 for unlabeled)
+    N=5              # # of neighbors per seed
+):
+    num = data_all.shape[0]
+    # full array to accumulate: -1 = no label, ≥0 = label
+    full_labels = -1 * np.ones(num, dtype=int)
+    full_labels[mask_lab] = true_labels[mask_lab]
 
-from sklearn.neighbors import NearestNeighbors
-import numpy as np
-import torch
-
-def generate_pseudo_labeled_data_and_shrink(
-    data: np.ndarray,
-    cluster_ids: np.ndarray,
-    mask_lab: np.ndarray,
-    true_labels: np.ndarray,
-    N: int = 5
-) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
-    """
-    Propagate labels within each FINCH mini-cluster and
-    return the newly pseudo-labeled features & targets and shrunk unlabeled features.
-
-    Parameters
-    ----------
-    data         : (num_samples, feat_dim) full feature matrix (numpy)
-    cluster_ids  : (num_samples,)       FINCH cluster assignment for each sample
-    mask_lab     : (num_samples,) bool  True for originally labeled samples
-    true_labels  : (num_samples,)       original labels at mask_lab positions
-    N            : int                  how many unlabeled neighbors to grab per labeled point
-
-    Returns:
-      new_feats   : (M, D) numpy of newly pseudo-labeled features
-      new_targets : (M,)  numpy of their labels
-      remain_feats: (U-M, D) numpy of the unlabeled features left over
-    """
-    # propagate exactly as before
-    pseudo = -1 * np.ones_like(true_labels, dtype=int)
-    pseudo[mask_lab] = true_labels[mask_lab]
+    # for each cluster, propagate
     for c in np.unique(cluster_ids):
-        idx_c     = np.where(cluster_ids == c)[0]
-        lab_idx   = idx_c[mask_lab[idx_c]]
-        unlab_idx = idx_c[~mask_lab[idx_c]]
-        if not len(lab_idx) or not len(unlab_idx):
+        idx_c      = np.where(cluster_ids == c)[0]
+        lab_idx    = idx_c[mask_lab[idx_c]]
+        unlab_idx  = idx_c[~mask_lab[idx_c]]
+        if len(lab_idx)==0 or len(unlab_idx)==0:
             continue
-        feats_lab   = data[lab_idx].reshape(len(lab_idx), -1)
-        feats_unlab = data[unlab_idx].reshape(len(unlab_idx), -1)
-        nn = NearestNeighbors(n_neighbors=min(N, feats_unlab.shape[0]),
-                              algorithm="auto").fit(feats_unlab.cpu())
-        _, nbrs = nn.kneighbors(feats_lab.cpu())
+
+        feats_lab   = data_all[lab_idx].reshape(len(lab_idx), -1)
+        feats_unlab = data_all[unlab_idx].reshape(len(unlab_idx), -1)
+
+        nn = NearestNeighbors(n_neighbors=min(N, len(unlab_idx)), algorithm='auto')
+        nn.fit(feats_unlab.cpu())
+        dists, nbrs = nn.kneighbors(feats_lab.cpu())
+
         for i, li in enumerate(lab_idx):
-            pseudo[unlab_idx[nbrs[i]]] = true_labels[li]
+            neigh_glob = unlab_idx[nbrs[i]]
+            # assign seed’s label
+            full_labels[neigh_glob] = true_labels[li]
 
-    # which unlabeled got labels?
-    all_unlab       = np.where(~mask_lab)[0]
-    got_label_mask  = (pseudo[all_unlab] != -1)
-    new_idx_global  = all_unlab[got_label_mask]
-    remain_idx      = all_unlab[~got_label_mask]
+    # build outputs
+    pseudo_mask_full = (full_labels >= 0) & (~mask_lab)        # unlabeled→now pseudo-labeled
+    pseudo_indices   = np.where(pseudo_mask_full)[0]          # their positions
+    pseudo_targets   = full_labels[pseudo_mask_full]          # the labels themselves
 
-    new_feats   = data[new_idx_global]
-    new_targets = pseudo[new_idx_global]
-    remain_feats= data[remain_idx]
-
-    return new_feats, new_targets, remain_feats
-
-
+    return pseudo_targets, pseudo_mask_full, pseudo_indices
 
 
 def train_EDESC(device, i):
@@ -509,7 +487,7 @@ def train_EDESC(device, i):
     setup_seed(seed)
 
     from torch.utils.tensorboard import SummaryWriter
-    writer = SummaryWriter(log_dir="tensorboard")
+    writer = SummaryWriter(log_dir=f"tensorboard/{args.dataset}/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}")
 
     model = C_EDESC(
         n_input=args.n_input,
@@ -542,29 +520,37 @@ def train_EDESC(device, i):
     data = torch.Tensor(data).to(device)
     x_bar, hidden = get_initial_value(model, data)
 
-    # print(f'seed: {np.random.get_state()[1][0]}')
     # TODO: chances are that not all classes are within the l_feats selection for percentage wise selection
     u_feats, l_feats, l_targets, mask_lab = get_labeled_data_strat(y, data, args.label_usage, seed)
     # print("mask;", np.where(mask_lab)[0])
 
-    # expanding l_feats based on nearest neighbors in FINCH-clusters
-    pseudo_feats, pseudo_targets, shrunk_u_feats = generate_pseudo_labeled_data_and_shrink(
-        data.reshape(dataset.__len__(), -1),
-        cluster_ids=req_c,
-        mask_lab=mask_lab,
-        true_labels=np.where(mask_lab, y, -1),
-        N=(args.label_usage if args.label_usage >= 1 else (data.y.shape[0] * args.label_usage) / args.n_clusters)
-    )
+    if args.pseudo_clusters == True:
+        # expanding l_feats based on nearest neighbors in FINCH-clusters
+        pseudo_targets, pseudo_mask_full, pseudo_indices = generate_cluster_pseudo_labels(
+            data.reshape(dataset.__len__(), -1),
+            cluster_ids=req_c,
+            mask_lab=mask_lab,
+            true_labels=np.where(mask_lab, y, -1),
+            # N=(args.label_usage if args.label_usage >= 1 else (data.y.shape[0] * args.label_usage) / args.n_clusters)
+            N = args.pseudo_nn
+        )
 
-    # pseudo_feats = torch.from_numpy(pseudo_feats).to(device)
-    # pseudo_targets = torch.from_numpy(pseudo_targets).long().to(device)
+        print(accuracy_score(pseudo_targets, y[pseudo_indices]))
 
-    l_feats = torch.cat([l_feats, pseudo_feats], dim=0)
-    l_targets = torch.concatenate([l_targets, pseudo_targets], dim=0)
-    print(f"Extended labeled set: {l_feats.size(0)} samples ",
-          f"({dataset.__len__() - u_feats.size(0)} real + {pseudo_feats.size(0)} pseudo)")
-    u_feats = shrunk_u_feats
+        # masking out the new pseudo_features
+        u_idx = np.where(~mask_lab)[0]
+        pseudo_mask_unlabeled = pseudo_mask_full[u_idx]
+        pseudo_feats = u_feats[pseudo_mask_unlabeled]
 
+        # adding the pseudo_feats and pseudo_targets to l_feats and l_targets
+        print(l_feats.shape, u_feats.shape, pseudo_feats.shape)
+        l_feats = torch.cat([l_feats, pseudo_feats], dim=0)
+        l_targets = torch.cat([torch.tensor(l_targets), torch.tensor(pseudo_targets)], dim=0)
+
+        # shrinking u_feats and expanding the mask_lab
+        u_feats = u_feats[~pseudo_mask_unlabeled]
+        mask_lab = mask_lab | pseudo_mask_full
+        print(l_feats.shape, u_feats.shape)
 
 
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=30, random_state=seed)
@@ -668,7 +654,7 @@ def train_EDESC(device, i):
             s_labeled = s[mask_lab]
             y_labeled = torch.tensor(l_targets, device=s.device)
             #maybe also use/add high conf pseudo labels?
-            contr_loss = model.supervised_contrastive_loss(s_labeled, y_labeled)
+            contr_loss = model.supervised_contrastive_loss(s_labeled[:,perm], y_labeled, temperature = .5)
 
             fixmatch_loss = torch.tensor(0.0)
             # augmentations on the soft-assignment matrix or latent dimension did not seem to help
@@ -679,7 +665,7 @@ def train_EDESC(device, i):
             # Combine the four semi-supervised losses with learned uncertainty weighting
             # semisup_losses = [cross_loss, pseudo_loss, contr_loss, fixmatch_loss]
             # weighted_semisup_loss = torch.tensor(0.0, device=device)
-
+            #
             # for i, L in enumerate(semisup_losses):
             #     precision = torch.exp(-model.log_vars_semisup[i])  # = 1 / sigma_i^2
             #     # Weighted Loss = precision * L + log_vars_semisup[i] for regularization
@@ -693,11 +679,18 @@ def train_EDESC(device, i):
                            args.psi * fixmatch_loss +
                            args.omega * contr_loss
                            )
-
             scaler.scale(total_loss).backward()
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
+
+            writer.add_scalar('Loss/total', total_loss.item(), epoch_iter)
+            writer.add_scalar('Loss/reconstruction', reconstr_loss.item(), epoch_iter)
+            writer.add_scalar('Loss/kl', kl_loss.item() * args.alpha, epoch_iter)
+            writer.add_scalar('Loss/CE', cross_loss.item() * args.delta, epoch_iter)
+            writer.add_scalar('Loss/pseudo', pseudo_loss.item() * args.epsilon, epoch_iter)
+            writer.add_scalar('Loss/contrastive', contr_loss.item() * args.omega, epoch_iter)
+            writer.add_scalar('Loss/FM', fixmatch_loss.item() * args.psi, epoch_iter)
 
             if epoch_iter % 10 == 0 or epoch_iter == epochs - 1:
                 print('[Eval]', 'Iter {}'.format(epoch_iter), ':Current Acc {:.4f}'.format(acc),
@@ -723,17 +716,22 @@ def train_EDESC(device, i):
     print('Running time: ', end - start)
 
     # uncertainty weighting values
-    # print(model.log_vars_semisup)
-
+    # print("weights: ",model.log_vars_semisup)
 
     cm = confusion_matrix(y, y_pred_remap)
     labels = np.unique(np.concatenate([y, y_pred_remap]))
+
+    # calculating column width for confusion matrix formatting
+    max_label_len = max(len(str(l)) for l in labels)
+    max_count_len = max(len(str(v)) for v in cm.flatten())
+    column_width = max(6, max_label_len + 2, max_count_len + 2)
+
     print("Confusion Matrix:")
-    # header row
-    print("\t" + "\t".join(str(l) for l in labels))
-    # each row: true label, then counts per predicted label
+    # header row: pad the empty corner to column_width, then each label
+    print(" " * column_width + "".join(f"{l:>{column_width}}" for l in labels))
     for true_label, row in zip(labels, cm):
-        print(f"{true_label}\t" + "\t".join(str(v) for v in row))
+        # print true_label, then each count with the same width
+        print(f"{true_label:>{column_width}}" + "".join(f"{v:>{column_width}d}" for v in row))
 
     if args.delta != .0 or args.omega != .0:
         print(f"{'percentage' if args.label_usage < 1 else 'number'} of labeled data used: {args.label_usage} meaning {len(y_pred_logits_remap_partial)}/{len(y)} used")
@@ -780,6 +778,9 @@ if __name__ == "__main__":
     parser.add_argument('--topk', default=1, type=int, help="count of pseudo labels to be summed for the threshold to be met") #1
     parser.add_argument('--psi', default=.4, type=float, help='the weight of the fixmatch-style_loss') #.5
     parser.add_argument('--omega', default=.3, type=float, help='the weight of the contrastive_loss') #.5
+    parser.add_argument('--pseudo_clusters', default=False, type=bool, help='usage of pseudolabels by FINCH') #.5
+    parser.add_argument('--pseudo_nn', default=2, type=int, help='Amount of neighbours in cluster to include in pseudolabel') #.5
+
 
     args = parser.parse_args()
     args.cuda = torch.cuda.is_available()
