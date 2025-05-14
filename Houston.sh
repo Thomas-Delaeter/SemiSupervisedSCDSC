@@ -43,7 +43,9 @@ python Model.py \
     --lnp ${lnp} \
     --outp ${outp} \
     --beta ${beta} \
-    --gama ${gama} | tee $OUTPUT_FILE
+    --gama ${gama} \
+    | tee $OUTPUT_FILE
 # Confirm where the output has been saved
 echo "Output saved to $OUTPUT_FILE"
+#    --optuna \
 
