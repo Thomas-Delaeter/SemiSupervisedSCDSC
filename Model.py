@@ -33,7 +33,7 @@ import optuna
 
 from faster_mix_k_means_pytorch import K_Means as SemiSupKMeans
 from cluster_and_log_utils import log_accs_from_preds
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, normalized_mutual_info_score, cohen_kappa_score
 from torch.cuda.amp import autocast, GradScaler
 
 torch.backends.cudnn.benchmark = False
@@ -106,22 +106,19 @@ class C_EDESC(nn.Module):
         nn.init.xavier_uniform_(self.D) # stable inplace init of D
         print(self.D.shape)
 
-        # augmentation functions called in foward pass, they did not really seem to help...
+        # augmentation functions called in foward pass
+        # augmentations did not help multi-view learning, meaning that they already provide distinct feature learning
         self.weak_latent_aug = WeakLatentAug(noise_std=0.01, flip_prob=0.5)
         self.strong_latent_aug = StrongLatentAug(
             noise_std=0.1,
             drop_prob=0.2,
-
-            # TODO:these probably do something, but i dont feel like its noticable.. even on paviaU
-            #  maybe more labeled data/finetuning the loss?
             shift=True,
             flip=True
         )
 
-        # learnable weights of the loss func
+        # learnable weights of the loss func, uncertainty-weight inspired (not used)
         # cross, pseudo, contrastive, fixmatch
-        # self.log_vars_semisup = nn.Parameter(torch.zeros(4))
-        self.log_vars_semisup = nn.Parameter(torch.tensor([args.delta, args.epsilon, args.omega, args.psi]))
+        self.log_vars_semisup = nn.Parameter(torch.tensor([args.delta, args.lmdb, args.omega, args.psi]))
 
         # Pseudo-Label Module
         self.pseudo_classifier = nn.Sequential(
@@ -153,7 +150,6 @@ class C_EDESC(nn.Module):
         # z_strong = self.strong_latent_aug(z)
 
         # Pseudo Label
-        # z_aug = z + torch.randn_like(z) * 0.1
         pseudo_logits = self.pseudo_classifier(z)
         pseudo_logits_aug = None#= self.pseudo_classifier(z_strong)
 
@@ -185,6 +181,8 @@ class C_EDESC(nn.Module):
         # s_weak = (s_weak + eta * d) / ((eta + 1) * d)
         # s_weak = (s_weak.t() / torch.sum(s_weak, 1)).t()
 
+
+        # Augmenting the soft assignment matrix or latent environment did not provide meaningful contributions
         return x_bar, (s, s_weak), z, (pseudo_logits, pseudo_logits_aug)
 
     def total_loss(self, x, x_bar, center, target, dim, n_clusters, s, index):
@@ -208,7 +206,7 @@ class C_EDESC(nn.Module):
     def pseudo_loss(self, y, pseudo_logits):
 
         pseudo_loss = torch.tensor(0.0, device=device)
-        if args.epsilon == .0:
+        if args.lmdb == .0:
             return pseudo_loss
 
         print(f"Pseudo accuracy was {accuracy_score(torch.argmax(pseudo_logits.cpu(), dim=1), y)}")
@@ -234,7 +232,7 @@ class C_EDESC(nn.Module):
         # Same as pseudo_loss but uses S, which already is a distribution
 
         pseudo_loss = torch.tensor(0.0, device=device)
-        if args.epsilon == 0.0:
+        if args.lmdb == 0.0:
             return pseudo_loss
 
         # s already provides some kind of distribution so just normalizing because it seemed to give errors
@@ -436,9 +434,6 @@ def train_one_epoch_fixmatch(model, unlabeled_data, scaler, batch_size=64, thres
     else:
         return torch.tensor(0.0, device=device)
 
-from sklearn.neighbors import NearestNeighbors
-import numpy as np
-
 def generate_cluster_pseudo_labels(
     data_all,        # np.ndarray, shape (num_samples, feat_dim)
     cluster_ids,     # array-like, shape (num_samples,)
@@ -542,8 +537,8 @@ def train_EDESC(device, i):
     else:
         seed = None
 
-    from torch.utils.tensorboard import SummaryWriter
-    writer = SummaryWriter(log_dir=f"tensorboard/{args.dataset}/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}")
+    # from torch.utils.tensorboard import SummaryWriter
+    # writer = SummaryWriter(log_dir=f"tensorboard/{args.dataset}/{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}")
 
     model = C_EDESC(
         n_input=args.n_input,
@@ -555,8 +550,8 @@ def train_EDESC(device, i):
     data = data.astype(np.float16)
     y = dataset.y
 
-    ascii_histogram(y)
 
+    ascii_histogram(y)
     # utilize finch to generate big groups
     from finch import FINCH
     data = data.reshape(data.shape[0], -1)
@@ -572,7 +567,7 @@ def train_EDESC(device, i):
     scaler = GradScaler()
 
     index = dataset.index
-    data = dataset.train
+    data = dataset.train.astype(np.float16)
     data = torch.Tensor(data).to(device)
     x_bar, hidden = get_initial_value(model, data)
 
@@ -583,20 +578,20 @@ def train_EDESC(device, i):
     if args.pseudo_clusters == True:
         # expanding l_feats based on nearest neighbors in FINCH-clusters
         pseudo_targets, pseudo_mask_full, pseudo_indices = generate_cluster_pseudo_labels(
-            data.reshape(dataset.__len__(), -1),
+            data.reshape(len(data), -1),
             cluster_ids=req_c,
             mask_lab=mask_lab,
             true_labels=np.where(mask_lab, y, -1),
             # N=(args.label_usage if args.label_usage >= 1 else (data.y.shape[0] * args.label_usage) / args.n_clusters)
             N = args.pseudo_nn
         )
-        # pseudo_targets, pseudo_mask_full, pseudo_indices = generate_cluster_pseudo_labels2(
-        #     data.reshape(dataset.__len__(), -1),
-        #     c_all=c,
-        #     mask_lab=mask_lab,
-        #     true_labels=np.where(mask_lab, y, -1),
-        #     mini_level = 1
-        # )
+        pseudo_targets, pseudo_mask_full, pseudo_indices = generate_cluster_pseudo_labels2(
+            data.reshape(dataset.__len__(), -1),
+            c_all=c,
+            mask_lab=mask_lab,
+            true_labels=np.where(mask_lab, y, -1),
+            mini_level = 1
+        )
 
         print(accuracy_score(pseudo_targets, y[pseudo_indices]))
 
@@ -620,10 +615,10 @@ def train_EDESC(device, i):
 
     kmeans = KMeans(n_clusters=args.n_clusters, n_init=30, random_state=seed)
     y_pred = kmeans.fit_predict(hidden.data.cpu().numpy().reshape(dataset.__len__(), -1))
-    # print("Initial Cluster Centers: ", y_pred)
+    print("Initial Cluster Centers: ", y_pred)
 
     kmeans = SemiSupKMeans(k=args.n_clusters, tolerance=1e-4, max_iterations=300, init='k-means++',
-                           n_init=30, random_state=seed, n_jobs=-1, pairwise_batch_size=1024,
+                           n_init=30, random_state=seed, n_jobs=8, pairwise_batch_size=512,
                            mode=None)
 
     u_feats = torch.tensor(u_feats, dtype=torch.float32)
@@ -636,13 +631,22 @@ def train_EDESC(device, i):
     print(f"kmeans: {accuracy_score(y_pred, y)}")
     print(f"sskmeans both: {accuracy_score(y_pred_sskm, y)}")
 
-    # TODO: ss-k-means does not increase performance at all
-    #  maybe a toggle to use the one which is greater?
-    #  Though shouldnt ss-k-m be always superior because labels
+    global km_acc, km_nmi, km_kappa
+    km_acc.append(accuracy_score(y_pred, y))
+    km_nmi.append(normalized_mutual_info_score(y_pred, y))
+    km_kappa.append(cohen_kappa_score(y_pred, y))
+
+    global semi_acc, semi_nmi, semi_kappa
+    semi_acc.append(accuracy_score(y_pred_sskm, y))
+    semi_nmi.append(normalized_mutual_info_score(y_pred_sskm,y))
+    semi_kappa.append(cohen_kappa_score(y_pred_sskm, y))
+
+    # use ss-k-means over unsupervised version
+    del kmeans
     y_pred = y_pred_sskm
 
     # Initialize D
-    D = Initialization_D(hidden.reshape(dataset.__len__(), -1), y_pred, args.n_clusters, args.d)
+    D = Initialization_D(hidden.reshape(len(y_pred), -1), y_pred, args.n_clusters, args.d)
     D = torch.tensor(D).to(torch.float32)
 
     accmax = 0
@@ -727,7 +731,7 @@ def train_EDESC(device, i):
             fixmatch_loss =  model.fixmatch_style_loss(y, s[:,perm], pseudo_logits[:,perm], .80)
 
 
-            # Combine the four semi-supervised losses with learned uncertainty weighting
+            # Combine the four semi-supervised losses with learned uncertainty weighting (not used)
             # semisup_losses = [cross_loss, pseudo_loss, contr_loss, fixmatch_loss]
             # weighted_semisup_loss = torch.tensor(0.0, device=device)
             #
@@ -739,29 +743,23 @@ def train_EDESC(device, i):
 
             total_loss = (total_loss +
                           args.delta * cross_loss +
-                          args.epsilon * pseudo_loss +
+                          args.lmdb * pseudo_loss +
                           args.psi * fixmatch_loss +
                           args.omega * contr_loss
                           )
-            # total_loss = (total_loss +
-            #               args.delta * cross_loss +
-            #               args.delta * contr_loss +
-            #               args.psi * pseudo_loss +
-            #               args.psi * fixmatch_loss
-            #               )
 
             scaler.scale(total_loss).backward()
             scaler.step(optimizer)
             scaler.update()
             optimizer.zero_grad()
 
-            writer.add_scalar('Loss/total', total_loss.item(), epoch_iter)
-            writer.add_scalar('Loss/reconstruction', reconstr_loss.item(), epoch_iter)
-            writer.add_scalar('Loss/kl', kl_loss.item() * args.alpha, epoch_iter)
-            writer.add_scalar('Loss/CE', cross_loss.item() * args.delta, epoch_iter)
-            writer.add_scalar('Loss/pseudo', pseudo_loss.item() * args.epsilon, epoch_iter)
-            writer.add_scalar('Loss/contrastive', contr_loss.item() * args.omega, epoch_iter)
-            writer.add_scalar('Loss/FM', fixmatch_loss.item() * args.psi, epoch_iter)
+            # writer.add_scalar('Loss/total', total_loss.item(), epoch_iter)
+            # writer.add_scalar('Loss/reconstruction', reconstr_loss.item(), epoch_iter)
+            # writer.add_scalar('Loss/kl', kl_loss.item() * args.alpha, epoch_iter)
+            # writer.add_scalar('Loss/CE', cross_loss.item() * args.delta, epoch_iter)
+            # writer.add_scalar('Loss/pseudo', pseudo_loss.item() * args.lmdb, epoch_iter)
+            # writer.add_scalar('Loss/contrastive', contr_loss.item() * args.omega, epoch_iter)
+            # writer.add_scalar('Loss/FM', fixmatch_loss.item() * args.psi, epoch_iter)
 
             if epoch_iter % 10 == 0 or epoch_iter == epochs - 1:
                 print('[Eval]', 'Iter {}'.format(epoch_iter), ':Current Acc {:.4f}'.format(acc),
@@ -774,7 +772,7 @@ def train_EDESC(device, i):
                     f"recon: {reconstr_loss.data:.4f} | "
                     f"kl: {kl_loss.data:.4f} | "
                     f"entropy: {(args.delta * cross_loss.data):.4f} | "
-                    f"pseudo: {(args.epsilon * pseudo_loss.data):.4f} | "
+                    f"pseudo: {(args.lmdb * pseudo_loss.data):.4f} | "
                     f"contras: {(args.omega * contr_loss.data):.4f} | "
                     f"FM: {(args.psi * fixmatch_loss.data):.4f}"
                 )
@@ -783,7 +781,7 @@ def train_EDESC(device, i):
 
     end = time.time()
 
-    writer.close()
+    # writer.close()
     print('Running time: ', end - start)
 
     # uncertainty weighting values
@@ -807,6 +805,8 @@ def train_EDESC(device, i):
     if args.delta != .0 or args.omega != .0:
         print(f"{'percentage' if args.label_usage < 1 else 'number'} of labeled data used: {args.label_usage} meaning {len(y_pred_logits_remap_partial)}/{len(y)} used")
 
+    del u_feats, l_feats, l_targets
+    del c, num_clust, req_c
     return accmax, nmimax, kappa_max, ca_max
 
 
@@ -822,6 +822,13 @@ if __name__ == "__main__":
 
     pseudo_miss = 0
 
+    semi_acc = []
+    km_acc = []
+    semi_nmi = []
+    km_nmi = []
+    semi_kappa = []
+    km_kappa = []
+
     parser = argparse.ArgumentParser(
         description='EDESC training',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -835,7 +842,7 @@ if __name__ == "__main__":
     parser.add_argument('--hierarchy', default=1, type=int)
     parser.add_argument('--n_z', default=32, type=int)
     parser.add_argument('--eta', default=5, type=int)
-    parser.add_argument('--dataset', type=str, default='Houston')
+    parser.add_argument('--dataset', type=str, default='pavia')
     parser.add_argument('--device_index', type=int, default=0)
     parser.add_argument('--pretrain_path', type=str, default='./tmp/flood/pre.pkl')
     parser.add_argument('--alpha', default=3, type=float, help='the weight of kl_loss')
@@ -844,15 +851,20 @@ if __name__ == "__main__":
     
     # semi-supervised parameters
     parser.add_argument('--label_usage', default=4, type=float, help='decimal% or absolute value of labeled data used during training')
-    parser.add_argument('--delta', default=.5645384812622246, type=float, help='the weight of the cross_entropy_loss')
-    parser.add_argument('--epsilon', default=2.4063858973386485, type=float, help='the weight of the pseudo_label_loss') #2
-    parser.add_argument('--pseudo_threshold', default=.95, type=float, help='minimum confidence of the pseudo predications to be used') #.95
-    parser.add_argument('--topk', default=1, type=int, help="count of pseudo labels to be summed for the threshold to be met") #1
-    parser.add_argument('--psi', default=.9817395662528291, type=float, help='the weight of the fixmatch-style_loss') #.5
-    parser.add_argument('--omega', default=.09435628518551586, type=float, help='the weight of the contrastive_loss') #.5
+
+    parser.add_argument('--delta', default=.88, type=float, help='the weight of the cross_entropy_loss')
+    parser.add_argument('--omega', default=.22, type=float, help='the weight of the contrastive_loss')
+
+
+    parser.add_argument('--pseudo_threshold', default=.95, type=float, help='minimum confidence of the pseudo predications to be used')
+    parser.add_argument('--topk', default=1, type=int, help="count of pseudo labels to be summed for the threshold to be met")
+
+    parser.add_argument('--lmdb', default=0.17, type=float, help='the weight of the pseudo_label_loss')
+    parser.add_argument('--psi', default=.75, type=float, help='the weight of the fixmatch-style_loss')
+
     #experimental
-    parser.add_argument('--pseudo_clusters', default=False, type=bool, help='usage of pseudolabels by FINCH') #.5
-    parser.add_argument('--pseudo_nn', default=2, type=int, help='Amount of neighbours in cluster to include in pseudolabel') #.5
+    parser.add_argument('--pseudo_clusters', default=False, type=bool, help='usage of pseudo-labels by FINCH')
+    parser.add_argument('--pseudo_nn', default=2, type=int, help='Amount of neighbours in cluster to include in pseudolabel')
 
     #paramsearch
     parser.add_argument('--optuna', action='store_true', help='If set, run Optuna hyperparameter search instead of fixed args')
@@ -895,13 +907,6 @@ if __name__ == "__main__":
         dataset = Load_my_Dataset("C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/pavia/PaviaU.mat",
                                   "C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/pavia/PaviaU_gt.mat")
         args.num_sample = dataset.__len__()
-    elif args.dataset == 'indian':
-        args.pretrain_path = 'original_weight/indian_pines.pkl'
-        args.n_clusters = 16
-        args.n_input = 8
-        args.image_size = [145, 145]
-        dataset = Load_my_Dataset("C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/extra/indian_pines/Indian_pines.mat",
-                                  "C:/Users/thoma/Documents/School/Master/MasterProef/codebase/HSI/extra/indian_pines/Indian_pines_gt.mat",)
 
     print(args)
 
@@ -910,14 +915,15 @@ if __name__ == "__main__":
         def objective(trial):
             # sample hyperparams
             args.delta = trial.suggest_float("delta", 0.0, 1.0)
-            args.epsilon = trial.suggest_float("epsilon", 0.1, 5.0, log=True)
+            args.lmdb = trial.suggest_float("lmdb", 0.1, 5.0, log=True)
             args.psi = trial.suggest_float("psi", 0.0, 1.0)
             args.omega = trial.suggest_float("omega", 0.0, 1.0)
 
             # one run per trial for speed
             seed = 42
             setup_seed(seed)
-            acc, _, _, _ = train_EDESC(device=device, i=-1)
+            acc, _, _, _ = train_EDESC(device=device, i=0)
+            torch.cuda.empty_cache()
             return float(acc)
 
         start = time.time()
@@ -930,7 +936,7 @@ if __name__ == "__main__":
         print(f"Estimated ACC: {study.best_value:.4f}\n")
 
         # ── 2) Final 5-seed re-evaluation of top 5 trials ──
-        print("Re-evaluating top 5 candidates with 5 seeds each...")
+        print("Re-evaluating top 3 candidates with 5 seeds each...")
         completed = [t for t in study.trials if t.value is not None]
         top3 = sorted(completed, key=lambda t: t.value, reverse=True)[:3]
 
@@ -942,9 +948,9 @@ if __name__ == "__main__":
             for run in range(5):
                 # setup_seed(100 + run)
                 # apply candidate params
-                args.delta, args.epsilon, args.psi, args.omega = (
+                args.delta, args.lmdb, args.psi, args.omega = (
                     params["delta"],
-                    params["epsilon"],
+                    params["lmdb"],
                     params["psi"],
                     params["omega"]
                 )
@@ -959,6 +965,7 @@ if __name__ == "__main__":
         end = time.time()
         print("time: ", end - start)
     else:
+
         bestacc = 0
         bestnmi = 0
         best_kappa = 0
@@ -966,10 +973,12 @@ if __name__ == "__main__":
         nmi_sum = 0
         kappa_sum = 0
         rounds = 5 # if stepping away from 1 round, unset the seeds every run
+
         cas = []
         accs = []
         nmis = []
         kappas = []
+
         for i in range(rounds):
             print("this is " + str(i) + "round")
             acc, nmi, kappa, ca = train_EDESC(device=device, i=i)
@@ -992,4 +1001,7 @@ if __name__ == "__main__":
         print("average_nmi:", np.mean(nmis), np.std(nmis))
         print("average_kappa", np.mean(kappas), np.std(kappas))
         print('Best ACC {:.4f}'.format(bestacc), ' Best NMI {:4f}'.format(bestnmi), ' Best kappa {:4f}'.format(kappa))
-        print(f'Pseudo classifier missed threshold {args.pseudo_threshold} {pseudo_miss if args.epsilon != .0 else 0} out of {epochs if args.epsilon != .0 else 0} times')
+
+        print(f"kmeans; avg_acc: {np.mean(km_acc):.4f}, avg_nmi: {np.mean(km_nmi):.4f}, avg_kappa: {np.mean(km_kappa):.4f}")
+        print(f"ss-kmeans; avg_acc: {np.mean(semi_acc):.4f}, avg_nmi: {np.mean(semi_nmi):.4f}, avg_kappa: {np.mean(semi_kappa):.4f}")
+        print(f'Pseudo classifier missed threshold {args.pseudo_threshold} {pseudo_miss/rounds if args.lmdb != .0 else 0} out of {epochs if args.lmdb != .0 else 0} times')

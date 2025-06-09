@@ -39,7 +39,8 @@ beta=1
       --alpha ${alpha} \
       --beta ${beta} \
       --gama ${gama} \
-      --optuna | tee $OUTPUT_FILE
+      | tee $OUTPUT_FILE
   # Confirm where the output has been saved
   echo "Output saved to $OUTPUT_FILE"
 
+#      --optuna \

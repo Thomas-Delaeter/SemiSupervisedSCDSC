@@ -41,9 +41,9 @@ python Model.py \
     --alpha ${alpha} \
     --beta ${beta} \
     --gama ${gama} \
-    --optuna \
     | tee $OUTPUT_FILE
 
 
 # Confirm where the output has been saved
 echo "Output saved to $OUTPUT_FILE"
+#    --optuna \
