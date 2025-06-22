@@ -11,8 +11,6 @@ from torch.optim import Adam
 from torch.utils.data import DataLoader, TensorDataset
 from sklearn.metrics import confusion_matrix
 
-from attention_span_classifier import AttentionPseudoClassifier
-
 from consistency_regularization import WeakAug, HSIRandAugment
 from consistency_regularization_gpu import WeakAug as WeakAugGPU
 from consistency_regularization_gpu import HSIRandAugment as HSIRandAugGPU
@@ -133,7 +131,6 @@ class C_EDESC(nn.Module):
             nn.Flatten(),
             nn.Linear(32, n_clusters)
         )
-        # self.pseudo_classifier = AttentionPseudoClassifier(n_z, n_clusters)
 
     def pretrain(self, path=''):
         if path == '':
@@ -643,7 +640,8 @@ def train_EDESC(device, i):
 
     # use ss-k-means over unsupervised version
     del kmeans
-    y_pred = y_pred_sskm
+    if args.semsc:
+        y_pred = y_pred_sskm
 
     # Initialize D
     D = Initialization_D(hidden.reshape(len(y_pred), -1), y_pred, args.n_clusters, args.d)
@@ -787,6 +785,9 @@ def train_EDESC(device, i):
     # uncertainty weighting values
     print("weights: ",model.log_vars_semisup)
 
+    global predicted_labels
+    predicted_labels.append(y_pred_remap)
+
     cm = confusion_matrix(y, y_pred_remap)
     labels = np.unique(np.concatenate([y, y_pred_remap]))
 
@@ -851,16 +852,17 @@ if __name__ == "__main__":
     
     # semi-supervised parameters
     parser.add_argument('--label_usage', default=4, type=float, help='decimal% or absolute value of labeled data used during training')
+    parser.add_argument('--semsc', default=True, type=bool, help='semi-supervised subspace construction')
 
-    parser.add_argument('--delta', default=.88, type=float, help='the weight of the cross_entropy_loss')
-    parser.add_argument('--omega', default=.22, type=float, help='the weight of the contrastive_loss')
+    parser.add_argument('--delta', default=.56, type=float, help='the weight of the cross_entropy_loss')
+    parser.add_argument('--omega', default=.09, type=float, help='the weight of the contrastive_loss')
 
 
     parser.add_argument('--pseudo_threshold', default=.95, type=float, help='minimum confidence of the pseudo predications to be used')
     parser.add_argument('--topk', default=1, type=int, help="count of pseudo labels to be summed for the threshold to be met")
 
-    parser.add_argument('--lmdb', default=0.17, type=float, help='the weight of the pseudo_label_loss')
-    parser.add_argument('--psi', default=.75, type=float, help='the weight of the fixmatch-style_loss')
+    parser.add_argument('--lmdb', default=2.409, type=float, help='the weight of the pseudo_label_loss')
+    parser.add_argument('--psi', default=0.98, type=float, help='the weight of the fixmatch-style_loss')
 
     #experimental
     parser.add_argument('--pseudo_clusters', default=False, type=bool, help='usage of pseudo-labels by FINCH')
@@ -979,6 +981,8 @@ if __name__ == "__main__":
         nmis = []
         kappas = []
 
+        predicted_labels = []
+
         for i in range(rounds):
             print("this is " + str(i) + "round")
             acc, nmi, kappa, ca = train_EDESC(device=device, i=i)
@@ -1005,3 +1009,14 @@ if __name__ == "__main__":
         print(f"kmeans; avg_acc: {np.mean(km_acc):.4f}, avg_nmi: {np.mean(km_nmi):.4f}, avg_kappa: {np.mean(km_kappa):.4f}")
         print(f"ss-kmeans; avg_acc: {np.mean(semi_acc):.4f}, avg_nmi: {np.mean(semi_nmi):.4f}, avg_kappa: {np.mean(semi_kappa):.4f}")
         print(f'Pseudo classifier missed threshold {args.pseudo_threshold} {pseudo_miss/rounds if args.lmdb != .0 else 0} out of {epochs if args.lmdb != .0 else 0} times')
+
+        from scipy.stats import mode
+        y_pred = mode(predicted_labels, axis=0, keepdims=False).mode
+        print(y_pred.shape)
+
+        img = np.full((args.image_size[0], args.image_size[1]), 0, dtype=dataset.y.dtype)
+        rows, cols = dataset.index
+        img[rows, cols] = y_pred+1
+
+        import scipy.io
+        # scipy.io.savemat(f'./results/conference/01-{args.dataset}-SCDSC.mat', {'prediction': img})
